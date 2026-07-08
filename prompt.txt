@@ -1,0 +1,9 @@
+Refer CLAUDE.md and Plan.md. 
+
+In backend/routers/settings.py, implement:
+GET /api/settings — requires JWT bearer auth (decode token, get user_id from `sub`), returns the profile document (minus password_hash) for that user_id.
+PUT /api/settings — same auth, accepts partial updates: name, address, gstin, bank_name, account_number, ifsc, upi_id, gmail_address, gmail_app_password, default_gst_rate, invoice_prefix. Updates only provided fields in `profiles`.
+Add a shared get_current_user_id(token) dependency in backend/lib/auth_dep.py using python-jose to decode and validate JWT, raise 401 on failure.
+Wire router into main.py under /api/settings prefix.
+
+log updates CLAUDE.md and Plan.md with the exisiting format

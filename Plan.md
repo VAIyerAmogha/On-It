@@ -348,10 +348,10 @@ SCHEDULER_FOLLOWUP_HOUR_IST = 9
 ## Implementation order
 
 ### Phase 1 — Foundation
-1. MongoDB Atlas setup: create M0 cluster, all six collections, Atlas Vector Search index on `contract_chunks.embedding`
-2. FastAPI project scaffold: folder structure, main.py, config.py (all constants), requirements.txt
-3. Auth: register/login endpoints, JWT, profiles collection CRUD
-4. Settings endpoints: profile read/write, bank details
+1. [x] MongoDB Atlas setup: create M0 cluster, all six collections, Atlas Vector Search index on `contract_chunks.embedding` (Pydantic models defined)
+2. [x] FastAPI project scaffold: folder structure, main.py, config.py (all constants), requirements.txt
+3. [x] Auth: register/login endpoints, JWT, profiles collection CRUD
+4. [x] Settings endpoints: profile read/write, bank details
 
 ### Phase 2 — Ingestion pipeline
 5. lib/ingestion.py: pdfplumber native path

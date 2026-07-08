@@ -66,9 +66,13 @@ Start every session by reading PLAN.md, then this file.
     - Don't block the upload request on the extraction pipeline — it must run as an async background task
 
 ## Current focus
-Last updated: <!-- date -->
-Active work: <!-- what is being built right now -->
+Last updated: 2026-07-08
+Active work: Phase 1 — Foundation (Settings)
 Recent completions:
-- <!-- task — status -->
+- FastAPI project scaffold (main.py, config.py, requirements.txt, .env.example) — completed
+- Pydantic models for all 6 collections created — completed
+- Auth endpoints (POST /api/auth/register, POST /api/auth/login) + JWT + bcrypt — completed
+- PyMongo db singleton (db.py) — completed
+- Settings endpoints (GET/PUT /api/settings) with JWT dependency — completed
 Open questions / blockers:
-- <!-- anything blocking progress -->
+- None
