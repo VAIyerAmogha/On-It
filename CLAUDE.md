@@ -13,11 +13,10 @@ Start every session by reading PLAN.md, then this file.
       routers/milestones.py     — trigger/paid state transitions, invoice trigger
       routers/invoices.py       — invoice fetch, PDF download, followup pause/resume
       routers/contract_qa.py    — RAG question-answering endpoint
-      lib/ingestion.py          — routes PDF/DOCX to pdfplumber/PaddleOCR/python-docx
+      lib/ingestion.py          — routes PDF/DOCX to pdfplumber/OCR.space/python-docx
       lib/classifier.py         — contract type classification (keyword + Groq fallback)
       lib/extractor.py          — two-pass milestone extraction (regex + Groq)
-      lib/state_machine.py      — milestone status transitions + audit log
-      lib/scheduler.py          — APScheduler jobs (date triggers, followups)
+      lib/state_machine.py      — milestone status transitions, audit log, and lazy pending checks
       lib/invoice_gen.py        — ReportLab PDF generation + GST computation
       lib/rag.py                — chunking, embedding, retrieval, NLI faithfulness check
       lib/llm_client.py         — single Groq client wrapper, all LLM calls go through here
@@ -46,12 +45,14 @@ Start every session by reading PLAN.md, then this file.
     GMAIL_APP_PASSWORD     — Gmail app password (store encrypted in profiles, not plaintext env for user accounts)
     JWT_SECRET             — signing secret for auth tokens
     ENV                    — dev / prod flag for scheduler and logging behavior
+    OCR_SPACE_API_KEY      — API key for OCR.space scanned PDF text extraction
+    HF_API_TOKEN           — HuggingFace API token for remote embeddings
 
 ## Code conventions
     - All LLM calls go through lib/llm_client.py only — no direct Groq calls in routers or other lib files
     - No business logic in routers — routers call lib/ only, stay thin
     - Type hints on every function signature
-    - All external service clients (Mongo, Cloudinary, Groq, sentence-transformers model) are singletons, loaded once at startup
+    - All external service clients (Mongo, Cloudinary, Groq, HF API) are singletons, loaded once at startup
     - Milestone status changes only happen through lib/state_machine.py — never mutate `status` directly on a milestone document elsewhere
     - Every milestone state transition writes an entry to milestone_events (timestamp, actor, previous state) — no silent transitions
     - All extraction functions must return null (not guessed values) for fields not explicitly present in contract text
@@ -67,12 +68,20 @@ Start every session by reading PLAN.md, then this file.
 
 ## Current focus
 Last updated: 2026-07-08
-Active work: Phase 1 — Foundation (Settings)
+Active work: Phase 3 — Milestone extraction
 Recent completions:
 - FastAPI project scaffold (main.py, config.py, requirements.txt, .env.example) — completed
 - Pydantic models for all 6 collections created — completed
 - Auth endpoints (POST /api/auth/register, POST /api/auth/login) + JWT + bcrypt — completed
 - PyMongo db singleton (db.py) — completed
 - Settings endpoints (GET/PUT /api/settings) with JWT dependency — completed
+- lib/ingestion.py: pdfplumber native path (is_native_pdf, extract_native_pdf) — completed
+- lib/ingestion.py: OCR.space API path (extract_scanned_pdf) — completed
+- lib/ingestion.py: python-docx path (extract_docx) — completed
+- Section splitter: heading detection, section boundary output (split_sections) — completed
+- lib/classifier.py: keyword fast path (keyword_classify) — completed
+- lib/llm_client.py: single Groq API wrapper (call_groq) — completed
+- lib/classifier.py: Groq fallback logic (classify_contract) — completed
+- Contract upload endpoint (POST /api/contracts/upload) + background ingestion — completed
 Open questions / blockers:
 - None

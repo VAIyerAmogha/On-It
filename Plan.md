@@ -20,9 +20,8 @@ Contract Upload (PDF / DOCX)
 ┌───────────────────────────────┐
 │  Component 1: Ingestion       │
 │  native PDF → pdfplumber      │
-│  scanned PDF → PaddleOCR      │
+│  scanned PDF → OCR.space API  │
 │  DOCX → python-docx           │
-│  OpenCV preprocessing         │
 └─────────────┬─────────────────┘
               │ raw text + section structure
               ▼
@@ -50,8 +49,8 @@ Contract Upload (PDF / DOCX)
 │  PENDING → TRIGGERED → INVOICED     │
 │                      → PAID         │
 │                      → OVERDUE      │
-│  APScheduler: date trigger checker  │
-│  APScheduler: follow-up email queue │
+│  Lazy GET hooks: date trigger check │
+│  Lazy GET hooks: follow-up queue    │
 └─────────────┬───────────────────────┘
               │ on TRIGGERED
               ▼
@@ -67,10 +66,10 @@ Contract text indexed in parallel:
 ┌───────────────────────────────┐
 │  Component 6: RAG QA          │
 │  Section-level chunking       │
-│  sentence-transformers embed  │
+│  HF API remote embed          │
 │  MongoDB Atlas Vector Search  │
 │  Groq answer generation       │
-│  NLI faithfulness check       │
+│  Groq NLI faithfulness check  │
 └───────────────────────────────┘
 ```
 
@@ -131,8 +130,7 @@ contract_chunks
 
 - `.docx`: python-docx, preserve paragraph styles; Heading 1/2 → section boundary signals
 - `.pdf` (native): pdfplumber; if extracted text > 100 chars/page average → native path
-- `.pdf` (scanned): PaddleOCR PPStructure fallback; OpenCV preprocessing: grayscale + adaptive threshold, deskew via Hough transform, median blur denoise
-- PPStructure region classification: tables, key-value regions, plain text → pass region type as layout hint to section splitter
+- `.pdf` (scanned): OCR.space free API fallback for text extraction (via OCR_SPACE_API_KEY)
 - Section splitter: detect boundaries by matching headings — "Payment", "Milestone", "Schedule", "Deliverable", "Terms", "Scope"
 - Output: raw text + section structure dict passed to classifier and extractor; full text passed to RAG indexer
 
@@ -202,15 +200,21 @@ All transitions:
 - Write to `milestone_events`: timestamp, actor (system | user), previous state
 
 State definitions:
-- **PENDING**: default post-extraction. Event-based: waits for user to mark trigger met. Date-based: checked daily by APScheduler.
-- **TRIGGERED**: condition met. Dashboard + email notification. User confirms with one click. Retainer: set automatically by monthly cron.
+- **PENDING**: default post-extraction. Event-based: waits for user to mark trigger met. Date-based: checked opportunistically when user visits dashboard.
+- **TRIGGERED**: condition met. Dashboard + email notification. User confirms with one click. Retainer: set automatically on dashboard visit.
 - **INVOICED**: PDF generated, stored, sent to client. Invoice number, sent_at, due_date recorded. Follow-up clock starts.
 - **PAID**: user marks paid. `paid_date` and `payment_lag_days` recorded. Check if next milestone in sequence auto-triggers.
 - **OVERDUE**: due date passed without PAID. Follow-up escalates. Highlighted in dashboard.
 
-**APScheduler jobs (run inside FastAPI process):**
-- Date trigger job: daily at 8:00 AM IST — query PENDING milestones where `trigger_type: date_based` and `trigger_date <= today`, transition to TRIGGERED, create notification
-- Follow-up job: daily at 9:00 AM IST — query INVOICED + OVERDUE milestones, check against follow-up schedule, send due emails via smtplib
+**Lazy / On-Demand checks:**
+- `run_pending_checks(freelancer_id: str)` in lib/state_machine.py
+- Triggered opportunistically as a FastAPI BackgroundTask whenever the user hits GET /api/contracts or GET /api/milestones/{contract_id}.
+- Queries PENDING date-based milestones where `trigger_date <= today`, transitions to TRIGGERED, creates notification.
+- Queries INVOICED + OVERDUE milestones, checks against follow-up schedule, sends due emails via smtplib.
+- Scoped strictly to freelancer_id to ensure checks remain fast and cheap.
+
+**Manual fallback:**
+- POST /api/milestones/check-now (JWT-authenticated): Calls run_pending_checks(freelancer_id) synchronously and returns a summary JSON (e.g. {"triggered": 2, "followups_sent": 1}).
 
 ### Component 5 — Invoice Generator (lib/invoice_gen.py)
 
@@ -254,8 +258,8 @@ Log to followup_logs.
 **Indexing (one-time per contract, async post-upload):**
 - Section-level chunking — never token-level (clauses must stay intact)
 - Each chunk: section_ref, section_title, chunk_text, 384-dim embedding
-- Embedding model: sentence-transformers/all-MiniLM-L6-v2, loaded at FastAPI startup, stays in memory
-- ~2–4s for a full contract (15–30 sections) on Render CPU
+- Embedding model: sentence-transformers/all-MiniLM-L6-v2 via HuggingFace Inference API (HF_API_TOKEN)
+- Remote execution to save memory on Render CPU
 - Index via LangChain MongoDBAtlasVectorSearch, cosine similarity on `embedding` field
 
 **Querying:**
@@ -265,8 +269,8 @@ Log to followup_logs.
 - Prompt instructs: cite specific sections, refuse if answer not in contract
 
 **Faithfulness verification:**
-- Model: cross-encoder/nli-deberta-v3-small (184MB, CPU)
-- Entailment score on cited section vs. generated answer
+- Model: Groq LLM-as-judge NLI check (lib/llm_client.py)
+- Prompt asks Groq to score entailment 0.0-1.0 between cited section and generated answer, JSON output
 - Score < 0.5: suppress answer, return: "I couldn't find a reliable answer to this in your contract — please review the document directly."
 - ~600ms overhead per query, non-negotiable
 
@@ -286,6 +290,7 @@ GET    /api/milestones/{contract_id}
 PATCH  /api/milestones/{id}/trigger
 PATCH  /api/milestones/{id}/paid
 POST   /api/milestones/{id}/invoice
+POST   /api/milestones/check-now
 
 GET    /api/invoices/{id}
 GET    /api/invoices/{id}/pdf
@@ -304,19 +309,18 @@ PUT    /api/settings
 | Layer | Technology | Cost |
 |---|---|---|
 | Native PDF | pdfplumber | Free |
-| Scanned PDF | PaddleOCR PPStructure | Free |
+| Scanned PDF | OCR.space API | Free |
 | DOCX | python-docx | Free |
-| Image preprocessing | OpenCV | Free |
 | LLM | Groq (llama-3.1-8b-instant) | Free tier |
-| Embeddings | sentence-transformers/all-MiniLM-L6-v2 | Free, local |
-| NLI verification | cross-encoder/nli-deberta-v3-small | Free, local |
+| Embeddings | HuggingFace Inference API | Free tier |
+| NLI verification | Groq LLM-as-judge | Free tier |
 | RAG orchestration | LangChain | Free |
 | Vector store | MongoDB Atlas Vector Search | Free (M0) |
 | Database | MongoDB Atlas M0 | Free |
 | File storage | Cloudinary | Free (10GB) |
 | Auth | python-jose + passlib + bcrypt | Free |
 | API | FastAPI | Free |
-| Background jobs | APScheduler | Free |
+| Background jobs | Lazy FastAPI BackgroundTasks | Free |
 | Invoice PDF | ReportLab | Free |
 | Email | smtplib + Gmail SMTP | Free |
 | Frontend | Next.js + Tailwind CSS | Free |
@@ -325,6 +329,13 @@ PUT    /api/settings
 | Frontend hosting | Vercel Hobby | Free |
 
 **Total: ₹0/month**
+
+---
+
+## Infra constraints
+
+Render free tier = 512MB RAM / 0.1 CPU, 15-min idle spin-down, no free Cron Jobs.
+Because of this, local ML models (PaddleOCR, cross-encoders, local sentence-transformers) were replaced with external APIs. Checks are usage-triggered, not wall-clock guaranteed. If the user doesn't open the app for N days, pending triggers/follow-ups fire on next visit rather than on schedule. This is an accepted tradeoff to avoid needing external scheduling infra on Render's free tier.
 
 ---
 
@@ -339,8 +350,6 @@ OCR_MIN_CHARS_PER_PAGE = 100
 MAX_ANCHOR_CONTEXT_CHARS = 150
 GST_DEFAULT_RATE = 0.18
 FOLLOWUP_SCHEDULE_DAYS = [-3, 0, 7, 14, 30]
-SCHEDULER_TRIGGER_HOUR_IST = 8
-SCHEDULER_FOLLOWUP_HOUR_IST = 9
 ```
 
 ---
@@ -354,12 +363,12 @@ SCHEDULER_FOLLOWUP_HOUR_IST = 9
 4. [x] Settings endpoints: profile read/write, bank details
 
 ### Phase 2 — Ingestion pipeline
-5. lib/ingestion.py: pdfplumber native path
-6. lib/ingestion.py: PaddleOCR + OpenCV preprocessing path
-7. lib/ingestion.py: python-docx path
-8. Section splitter: heading detection, section boundary output
-9. lib/classifier.py: keyword fast path + Groq fallback
-10. Contract upload endpoint: async background task trigger, extraction_status tracking
+5. [x] lib/ingestion.py: pdfplumber native path
+6. [x] lib/ingestion.py: OCR.space API path
+7. [x] lib/ingestion.py: python-docx path
+8. [x] Section splitter: heading detection, section boundary output
+9. [x] lib/classifier.py: keyword fast path + Groq fallback
+10. [x] Contract upload endpoint: async background task trigger, extraction_status tracking
 
 ### Phase 3 — Milestone extraction
 11. lib/extractor.py: regex anchor pass
@@ -369,11 +378,11 @@ SCHEDULER_FOLLOWUP_HOUR_IST = 9
 15. Retainer template creation path
 16. Milestone CRUD: save to MongoDB, return with contract
 
-### Phase 4 — State machine + scheduler
+### Phase 4 — State machine + lazy checks
 17. lib/state_machine.py: all five states, transition functions, milestone_events logging
-18. lib/scheduler.py: APScheduler setup inside FastAPI lifespan
-19. Date trigger job (daily 8AM IST)
-20. Follow-up email job (daily 9AM IST)
+18. lib/state_machine.py: run_pending_checks() helper for date triggers and follow-ups
+19. FastAPI BackgroundTasks added to GET /api/contracts and GET /api/milestones/{contract_id}
+20. POST /api/milestones/check-now manual fallback endpoint
 21. PATCH /milestones/{id}/trigger and /paid endpoints
 
 ### Phase 5 — Invoice generation
@@ -386,10 +395,10 @@ SCHEDULER_FOLLOWUP_HOUR_IST = 9
 
 ### Phase 6 — RAG QA
 28. lib/rag.py: section-level chunking
-29. sentence-transformers model load at startup (singleton)
+29. HuggingFace API integration for remote embeddings
 30. MongoDB Atlas Vector Search indexing
 31. Query path: embed → retrieve → Groq generate
-32. NLI faithfulness verification (cross-encoder, CPU)
+32. NLI faithfulness verification (Groq LLM-as-judge)
 33. POST /contracts/{id}/ask endpoint
 
 ### Phase 7 — Frontend
@@ -419,7 +428,7 @@ SCHEDULER_FOLLOWUP_HOUR_IST = 9
 - **Range-based project totals:** e.g. "₹80,000–₹1,00,000" → extractor takes lower bound and flags for user confirmation.
 - **Advance contract classification (0.67 recall):** language overlaps with fixed-price; advance pattern only detected when explicitly labeled.
 - **RAG synthesis queries (0.70 accuracy):** top-3 retrieval doesn't always surface both relevant sections. top-5 improves to 0.80 but increases hallucination risk slightly.
-- **NLI refusal rate 0.80, not 1.00:** 2/10 hallucinated out-of-contract answers slip through NLI check above 0.5 threshold.
+- **NLI refusal rate 0.80, not 1.00:** Groq-based LLM judge may miss subtle hallucinations compared to a dedicated cross-encoder, though it saves memory overhead.
 
 ---
 

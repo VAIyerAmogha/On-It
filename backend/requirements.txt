@@ -6,3 +6,7 @@ passlib
 bcrypt==3.2.2
 python-dotenv
 pydantic
+requests
+python-docx
+pdfplumber
+python-multipart

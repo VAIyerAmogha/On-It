@@ -8,3 +8,23 @@ GST_DEFAULT_RATE = 0.18
 FOLLOWUP_SCHEDULE_DAYS = [-3, 0, 7, 14, 30]
 SCHEDULER_TRIGGER_HOUR_IST = 8
 SCHEDULER_FOLLOWUP_HOUR_IST = 9
+
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+OCR_SPACE_FREE_ENDPOINT = "https://api.ocr.space/parse/image"
+OCR_TIMEOUT_SECONDS = 30
+OCR_SPACE_API_KEY = os.getenv("OCR_SPACE_API_KEY")
+
+SECTION_BOUNDARY_KEYWORDS = [
+    "payment", "milestone", "schedule", "deliverable", "terms", "scope"
+]
+
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_CHAT_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL = "llama-3.1-8b-instant"
+GROQ_TIMEOUT_SECONDS = 30
+
+CLASSIFIER_ALLOWED_TYPES = ["fixed_price", "retainer", "phase_based", "advance", "unsupported"]
