@@ -1,36 +1,15 @@
 Refer CLAUDE.md and Plan.md. 
 
-In backend/lib/invoice_gen.py, replace the Phase 4 stub with:
+In backend/routers/contract_qa.py, add:
 
-send_followup_email(db, milestone: dict) -> None
+POST /api/contracts/{id}/ask
 
-- Look up the invoice (via invoice_id/invoice_number threaded through from
-  Phase 4/5, whichever your code already has on the milestone doc)
-- 400/no-op if the invoice's followup_paused flag is true
-- Compute days_from_due same way as Phase 4's run_pending_checks
-- Pick tone by day per config.FOLLOWUP_SCHEDULE_DAYS:
-    -3  -> friendly reminder before due date
-     0  -> neutral reminder, due today
-     7  -> first overdue notice
-     14 -> second overdue notice, firmer tone
-     30 -> final notice, escalated tone
-- Build subject + body (reuse generate_cover_note's Groq call pattern with
-  a tone parameter added — still structured inputs only)
-- Get the PDF bytes via lib.storage.retrieve_pdf(db, invoice["pdf_file_id"])
-  and send the same way as send_invoice_email — attach bytes directly, no
-  URL involved anywhere in this flow
-- Write a followup_logs entry with template_name=f"followup_day_{n}",
-  delivery_status
-- Go back to lib/state_machine.py's run_pending_checks Part C and swap the
-  Phase 4 stub call for this real function.
-
-In backend/routers/invoices.py, add:
-
-PATCH /api/invoices/{id}/followup
-- Depends on get_current_user_id, ownership check
-- Body: {"action": "pause" | "resume"}
-- Set invoices.followup_paused = True/False
-- Return the updated invoice
-
+- Depends on get_current_user_id, ownership check on the contract (404 if
+  not found/not owned)
+- 400 if contract["indexed_for_rag"] != True (with a message like
+  "This contract is still being indexed — try again shortly")
+- Body: {"question": string}
+- Call lib.rag.ask_contract(db, id, freelancer_id, question)
+- Return the result dict as-is (answer, cited_sections, faithfulness_score)
 
 log updates CLAUDE.md and Plan.md with the exisiting format

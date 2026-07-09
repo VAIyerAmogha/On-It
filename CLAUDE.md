@@ -106,5 +106,12 @@ Recent completions:
 - routers/invoices.py: GET /api/invoices/{id} and /pdf endpoints — completed
 - lib/invoice_gen.py: email delivery with Groq cover note — completed
 - lib/invoice_gen.py: send_followup_email and pause API — completed
+- lib/rag.py: remote text embedding generation (embed_text) — completed
+- lib/rag.py: indexing process (index_contract) and router integration — completed
+- lib/rag.py: query retrieval path (retrieve_top_k) — completed
+- lib/rag.py: answer generation (generate_answer) — completed
+- lib/rag.py: faithfulness NLI check (score_faithfulness) — completed
+- lib/rag.py: end-to-end RAG orchestration (ask_contract) — completed
+- routers/contract_qa.py: POST /api/contracts/{id}/ask endpoint — completed
 Open questions / blockers:
 - None

@@ -399,11 +399,11 @@ FOLLOWUP_SCHEDULE_DAYS = [-3, 0, 7, 14, 30]
 
 ### Phase 6 — RAG QA
 28. lib/rag.py: section-level chunking
-29. HuggingFace API integration for remote embeddings
-30. MongoDB Atlas Vector Search indexing
-31. Query path: embed → retrieve → Groq generate
-32. NLI faithfulness verification (Groq LLM-as-judge)
-33. POST /contracts/{id}/ask endpoint
+29. [x] HuggingFace API integration for remote embeddings
+30. [x] MongoDB Atlas Vector Search indexing
+31. [x] Query path: embed → retrieve → Groq generate
+32. [x] NLI faithfulness verification (Groq LLM-as-judge)
+33. [x] POST /contracts/{id}/ask endpoint
 
 ### Phase 7 — Frontend
 34. Next.js scaffold, Tailwind, react-pdf

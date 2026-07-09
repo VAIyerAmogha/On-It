@@ -31,3 +31,6 @@ CLASSIFIER_ALLOWED_TYPES = ["fixed_price", "retainer", "phase_based", "advance",
 
 GMAIL_ADDRESS = os.getenv("GMAIL_ADDRESS")
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
+
+HF_API_TOKEN = os.getenv("HF_API_TOKEN")
+HF_INFERENCE_ENDPOINT = "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction"

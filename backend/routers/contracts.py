@@ -52,6 +52,13 @@ def process_ingestion(contract_id: str, temp_path: str, filename: str):
         if milestones:
             save_milestones(db, milestones)
             
+        try:
+            from lib.rag import index_contract
+        except ImportError:
+            from backend.lib.rag import index_contract
+            
+        index_contract(db, contract_id, contract["freelancer_id"], sections)
+            
         review_required = any(is_review_required(ms.get("extraction_confidence", 1.0)) for ms in milestones)
         final_status = "review_required" if review_required else "extracted"
         
