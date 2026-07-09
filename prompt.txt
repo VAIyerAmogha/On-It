@@ -1,23 +1,23 @@
 Refer CLAUDE.md and Plan.md. 
 
-In backend/routers/contracts.py, add:
+In backend/routers/contracts.py, add/confirm:
 
-POST /api/contracts/upload
+GET /api/contracts/{id}
+- Depends on get_current_user_id
+- Fetch the contract doc filtered by _id AND freelancer_id (404 if not found
+  or not owned by this user)
+- Fetch its milestones (db.milestones.find({"contract_id": id, "freelancer_id": freelancer_id}))
+- Return {"contract": {...}, "milestones": [...]}
 
-- Depends on get_current_user_id (from lib.auth_dep) for freelancer_id
-- Accepts multipart file upload (UploadFile)
-- Validates extension is .pdf or .docx, else 400
-- Saves the upload to a temp path
-- Inserts a contracts document with extraction_status="processing",
-  freelancer_id, created_at=now, and placeholder fields for
-  client_name/project_name/etc. (null until Phase 3 fills them in)
-- Kicks off ingestion as a FastAPI BackgroundTask calling a new
-  process_ingestion(contract_id, temp_path, filename) helper in this file,
-  which calls lib.ingestion.ingest_file, then lib.classifier.classify_contract
-  on the full_text, then updates the contract doc with contract_type,
-  extraction_status="ingested" (or "failed" + error message on exception)
-- Returns immediately: {"contract_id": ..., "extraction_status": "processing"}
-- Do NOT block the response on the ingestion pipeline — that's the whole
-  point of the BackgroundTask.
+In backend/routers/milestones.py, add:
+
+GET /api/milestones/{contract_id}
+- Depends on get_current_user_id
+- Return db.milestones.find({"contract_id": contract_id, "freelancer_id": freelancer_id})
+  as a list, 404 if the contract itself doesn't belong to this freelancer
+
+Both endpoints must filter by freelancer_id — no exceptions, per the
+handoff's data-model rule. Don't wire the Phase 4 lazy-check BackgroundTask
+into these yet — that's Phase 4's job, not this step's.
 
 log updates CLAUDE.md and Plan.md with the exisiting format

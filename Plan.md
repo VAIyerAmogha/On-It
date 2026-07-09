@@ -371,12 +371,12 @@ FOLLOWUP_SCHEDULE_DAYS = [-3, 0, 7, 14, 30]
 10. [x] Contract upload endpoint: async background task trigger, extraction_status tracking
 
 ### Phase 3 — Milestone extraction
-11. lib/extractor.py: regex anchor pass
-12. lib/extractor.py: Groq structured extraction pass (JSON schema enforced)
-13. Percentage resolution logic + project total confidence check
-14. Confidence scoring + low-confidence flagging
-15. Retainer template creation path
-16. Milestone CRUD: save to MongoDB, return with contract
+11. [x] lib/extractor.py: regex anchor pass
+12. [x] lib/extractor.py: Groq structured extraction pass (JSON schema enforced)
+13. [x] Percentage resolution logic + project total confidence check
+14. [x] Confidence scoring + low-confidence flagging
+15. [x] Retainer template creation path
+16. [x] Milestone CRUD: save to MongoDB, return with contract
 
 ### Phase 4 — State machine + lazy checks
 17. lib/state_machine.py: all five states, transition functions, milestone_events logging

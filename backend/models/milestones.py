@@ -1,7 +1,7 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
 
-class Milestone(BaseModel):
+class MilestoneRecord(BaseModel):
     id: str | None = Field(default=None, alias="_id")
     contract_id: str
     freelancer_id: str

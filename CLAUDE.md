@@ -67,7 +67,7 @@ Start every session by reading PLAN.md, then this file.
     - Don't block the upload request on the extraction pipeline — it must run as an async background task
 
 ## Current focus
-Last updated: 2026-07-08
+Last updated: 2026-07-09
 Active work: Phase 3 — Milestone extraction
 Recent completions:
 - FastAPI project scaffold (main.py, config.py, requirements.txt, .env.example) — completed
@@ -83,5 +83,12 @@ Recent completions:
 - lib/llm_client.py: single Groq API wrapper (call_groq) — completed
 - lib/classifier.py: Groq fallback logic (classify_contract) — completed
 - Contract upload endpoint (POST /api/contracts/upload) + background ingestion — completed
+- lib/extractor.py: regex anchor pass (find_anchors) — completed
+- lib/extractor.py: Groq structured extraction pass (extract_milestone_from_anchor) — completed
+- lib/extractor.py: Percentage resolution logic (resolve_amounts) — completed
+- lib/extractor.py: Confidence scoring (score_confidence, is_review_required) — completed
+- lib/extractor.py: Retainer template creation (build_retainer_template) — completed
+- lib/extractor.py: Milestone CRUD orchestrator (extract_milestones, save_milestones) — completed
+- routers/contracts.py & routers/milestones.py: GET endpoints for contract and milestones — completed
 Open questions / blockers:
 - None

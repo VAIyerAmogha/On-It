@@ -9,10 +9,12 @@ try:
     from lib.auth_dep import get_current_user_id
     from lib.ingestion import ingest_file
     from lib.classifier import classify_contract
+    from lib.extractor import extract_milestones, save_milestones, is_review_required
 except ImportError:
     from backend.lib.auth_dep import get_current_user_id
     from backend.lib.ingestion import ingest_file
     from backend.lib.classifier import classify_contract
+    from backend.lib.extractor import extract_milestones, save_milestones, is_review_required
 
 router = APIRouter()
 
@@ -32,6 +34,31 @@ def process_ingestion(contract_id: str, temp_path: str, filename: str):
             {"$set": {
                 "contract_type": contract_type,
                 "extraction_status": "ingested"
+            }}
+        )
+        
+        # 4. Extract and save milestones
+        contract = db.contracts.find_one({"_id": ObjectId(contract_id)})
+        milestones = extract_milestones(
+            contract_id=contract_id,
+            freelancer_id=contract["freelancer_id"],
+            full_text=full_text,
+            contract_type=contract_type,
+            project_value=contract.get("project_value"),
+            project_value_confidence=contract.get("project_value_confidence", 0.0),
+            contract_date=contract.get("contract_date")
+        )
+        
+        if milestones:
+            save_milestones(db, milestones)
+            
+        review_required = any(is_review_required(ms.get("extraction_confidence", 1.0)) for ms in milestones)
+        final_status = "review_required" if review_required else "extracted"
+        
+        db.contracts.update_one(
+            {"_id": ObjectId(contract_id)},
+            {"$set": {
+                "extraction_status": final_status
             }}
         )
     except Exception as e:
@@ -98,3 +125,17 @@ async def upload_contract(
     )
     
     return {"contract_id": contract_id, "extraction_status": "processing"}
+
+@router.get("/{id}")
+async def get_contract(id: str, freelancer_id: str = Depends(get_current_user_id)):
+    db = get_db()
+    contract = db.contracts.find_one({"_id": ObjectId(id), "freelancer_id": freelancer_id})
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+        
+    contract["_id"] = str(contract["_id"])
+    milestones = list(db.milestones.find({"contract_id": id, "freelancer_id": freelancer_id}))
+    for m in milestones:
+        m["_id"] = str(m["_id"])
+        
+    return {"contract": contract, "milestones": milestones}
