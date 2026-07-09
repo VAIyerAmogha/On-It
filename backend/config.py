@@ -28,3 +28,6 @@ GROQ_MODEL = "llama-3.1-8b-instant"
 GROQ_TIMEOUT_SECONDS = 30
 
 CLASSIFIER_ALLOWED_TYPES = ["fixed_price", "retainer", "phase_based", "advance", "unsupported"]
+
+GMAIL_ADDRESS = os.getenv("GMAIL_ADDRESS")
+GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")

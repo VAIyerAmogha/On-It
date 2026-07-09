@@ -98,5 +98,13 @@ Recent completions:
 - lib/state_machine.py: run_pending_checks() date trigger and followup logic — completed
 - routers/contracts.py & routers/milestones.py: BackgroundTasks added for lazy checks — completed
 - routers/milestones.py: POST /api/milestones/check-now manual fallback — completed
+- lib/invoice_gen.py: build_invoice_data logic — completed
+- lib/invoice_gen.py: generate_invoice_pdf (ReportLab layout) — completed
+- lib/storage.py: GridFS abstraction for PDF storage — completed
+- lib/invoice_gen.py: create_invoice orchestrator — completed
+- routers/milestones.py: POST /api/milestones/{id}/invoice endpoint — completed
+- routers/invoices.py: GET /api/invoices/{id} and /pdf endpoints — completed
+- lib/invoice_gen.py: email delivery with Groq cover note — completed
+- lib/invoice_gen.py: send_followup_email and pause API — completed
 Open questions / blockers:
 - None

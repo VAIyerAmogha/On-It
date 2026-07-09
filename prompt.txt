@@ -1,26 +1,36 @@
 Refer CLAUDE.md and Plan.md. 
 
-In backend/routers/contracts.py:
-- On GET /api/contracts, add a BackgroundTask that calls
-  lib.state_machine.run_pending_checks(db, freelancer_id) for the current
-  user AFTER the response data is already assembled (BackgroundTasks run
-  after the response is sent, so this doesn't add latency)
+In backend/lib/invoice_gen.py, replace the Phase 4 stub with:
 
-In backend/routers/milestones.py:
-- On GET /api/milestones/{contract_id}, add the same BackgroundTask,
-  scoped to the current user's freelancer_id
+send_followup_email(db, milestone: dict) -> None
 
-- Fire it as: response, background_tasks: BackgroundTasks in the route
-  signature, then background_tasks.add_task(run_pending_checks, db, freelancer_id)
+- Look up the invoice (via invoice_id/invoice_number threaded through from
+  Phase 4/5, whichever your code already has on the milestone doc)
+- 400/no-op if the invoice's followup_paused flag is true
+- Compute days_from_due same way as Phase 4's run_pending_checks
+- Pick tone by day per config.FOLLOWUP_SCHEDULE_DAYS:
+    -3  -> friendly reminder before due date
+     0  -> neutral reminder, due today
+     7  -> first overdue notice
+     14 -> second overdue notice, firmer tone
+     30 -> final notice, escalated tone
+- Build subject + body (reuse generate_cover_note's Groq call pattern with
+  a tone parameter added — still structured inputs only)
+- Get the PDF bytes via lib.storage.retrieve_pdf(db, invoice["pdf_file_id"])
+  and send the same way as send_invoice_email — attach bytes directly, no
+  URL involved anywhere in this flow
+- Write a followup_logs entry with template_name=f"followup_day_{n}",
+  delivery_status
+- Go back to lib/state_machine.py's run_pending_checks Part C and swap the
+  Phase 4 stub call for this real function.
 
-Also in backend/routers/milestones.py, add:
+In backend/routers/invoices.py, add:
 
-POST /api/milestones/check-now
-- Depends on get_current_user_id
-- Calls run_pending_checks(db, freelancer_id) SYNCHRONOUSLY (not as a
-  BackgroundTask — this endpoint's whole purpose is an immediate result)
-- Returns {"triggered": n, "overdue_marked": n, "followups_sent": n} directly
-  from run_pending_checks' return value (adjust key names to match exactly
-  what run_pending_checks returns from 4.5)
+PATCH /api/invoices/{id}/followup
+- Depends on get_current_user_id, ownership check
+- Body: {"action": "pause" | "resume"}
+- Set invoices.followup_paused = True/False
+- Return the updated invoice
+
 
 log updates CLAUDE.md and Plan.md with the exisiting format

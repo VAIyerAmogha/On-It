@@ -10,3 +10,4 @@ requests
 python-docx
 pdfplumber
 python-multipart
+reportlab

@@ -388,12 +388,14 @@ FOLLOWUP_SCHEDULE_DAYS = [-3, 0, 7, 14, 30]
 21b. [x] PATCH /milestones/{id}/paid endpoint
 
 ### Phase 5 — Invoice generation
-22. lib/invoice_gen.py: ReportLab PDF layout
-23. GST computation, auto-fill from contract/profile data
-24. Cloudinary upload integration
-25. smtplib email delivery + Groq covering note generation
-26. followup_logs write
-27. POST /milestones/{id}/invoice endpoint
+22. [x] lib/invoice_gen.py: GST computation, auto-fill from contract/profile data (build_invoice_data)
+23. [x] lib/invoice_gen.py: ReportLab PDF layout (generate_invoice_pdf)
+24. [x] lib/storage.py: GridFS integration for invoice PDF storage
+24b. [x] lib/invoice_gen.py: create_invoice (orchestration and persistence)
+25. [x] smtplib email delivery + Groq covering note generation
+26. [x] followup_logs write
+27. [x] POST /api/milestones/{id}/invoice endpoint
+27b. [x] GET /api/invoices/{id} and /pdf endpoints
 
 ### Phase 6 — RAG QA
 28. lib/rag.py: section-level chunking

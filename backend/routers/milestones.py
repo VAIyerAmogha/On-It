@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from bson import ObjectId
 from db import get_db
+from pydantic import BaseModel
+from typing import Optional
 
 try:
     from lib.auth_dep import get_current_user_id
@@ -89,3 +91,35 @@ async def check_now(freelancer_id: str = Depends(get_current_user_id)):
         
     stats = run_pending_checks(db, freelancer_id)
     return stats
+
+class InvoiceCreateRequest(BaseModel):
+    edited_amount: Optional[float] = None
+
+@router.post("/{id}/invoice")
+async def create_milestone_invoice(
+    id: str,
+    request: Optional[InvoiceCreateRequest] = None,
+    freelancer_id: str = Depends(get_current_user_id)
+):
+    db = get_db()
+    try:
+        query_id = ObjectId(id)
+    except Exception:
+        query_id = id
+        
+    milestone = db.milestones.find_one({"_id": query_id, "freelancer_id": freelancer_id})
+    if not milestone:
+        raise HTTPException(status_code=404, detail="Milestone not found")
+        
+    if milestone.get("status") != "TRIGGERED":
+        raise HTTPException(status_code=409, detail=f"Milestone is currently '{milestone.get('status')}', not TRIGGERED")
+        
+    try:
+        from lib.invoice_gen import create_invoice
+    except ImportError:
+        from backend.lib.invoice_gen import create_invoice
+        
+    edited_amount = request.edited_amount if request else None
+    invoice = create_invoice(db, id, edited_amount=edited_amount)
+    invoice["_id"] = str(invoice["_id"])
+    return invoice
