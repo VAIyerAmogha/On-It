@@ -126,6 +126,24 @@ async def upload_contract(
     
     return {"contract_id": contract_id, "extraction_status": "processing"}
 
+@router.get("/")
+async def list_contracts(
+    background_tasks: BackgroundTasks,
+    freelancer_id: str = Depends(get_current_user_id)
+):
+    db = get_db()
+    contracts = list(db.contracts.find({"freelancer_id": freelancer_id}))
+    for c in contracts:
+        c["_id"] = str(c["_id"])
+        
+    try:
+        from lib.state_machine import run_pending_checks
+    except ImportError:
+        from backend.lib.state_machine import run_pending_checks
+        
+    background_tasks.add_task(run_pending_checks, db, freelancer_id)
+    return contracts
+
 @router.get("/{id}")
 async def get_contract(id: str, freelancer_id: str = Depends(get_current_user_id)):
     db = get_db()

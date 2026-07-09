@@ -379,11 +379,13 @@ FOLLOWUP_SCHEDULE_DAYS = [-3, 0, 7, 14, 30]
 16. [x] Milestone CRUD: save to MongoDB, return with contract
 
 ### Phase 4 — State machine + lazy checks
-17. lib/state_machine.py: all five states, transition functions, milestone_events logging
-18. lib/state_machine.py: run_pending_checks() helper for date triggers and follow-ups
-19. FastAPI BackgroundTasks added to GET /api/contracts and GET /api/milestones/{contract_id}
-20. POST /api/milestones/check-now manual fallback endpoint
-21. PATCH /milestones/{id}/trigger and /paid endpoints
+17. [x] lib/state_machine.py: all five states, transition functions, milestone_events logging
+17b. [x] lib/state_machine.py: mark_invoiced() helper wrapper
+18. [x] lib/state_machine.py: run_pending_checks() helper for date triggers and follow-ups
+19. [x] FastAPI BackgroundTasks added to GET /api/contracts and GET /api/milestones/{contract_id}
+20. [x] POST /api/milestones/check-now manual fallback endpoint
+21. [x] PATCH /milestones/{id}/trigger endpoint
+21b. [x] PATCH /milestones/{id}/paid endpoint
 
 ### Phase 5 — Invoice generation
 22. lib/invoice_gen.py: ReportLab PDF layout

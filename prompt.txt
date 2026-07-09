@@ -1,23 +1,26 @@
 Refer CLAUDE.md and Plan.md. 
 
-In backend/routers/contracts.py, add/confirm:
+In backend/routers/contracts.py:
+- On GET /api/contracts, add a BackgroundTask that calls
+  lib.state_machine.run_pending_checks(db, freelancer_id) for the current
+  user AFTER the response data is already assembled (BackgroundTasks run
+  after the response is sent, so this doesn't add latency)
 
-GET /api/contracts/{id}
+In backend/routers/milestones.py:
+- On GET /api/milestones/{contract_id}, add the same BackgroundTask,
+  scoped to the current user's freelancer_id
+
+- Fire it as: response, background_tasks: BackgroundTasks in the route
+  signature, then background_tasks.add_task(run_pending_checks, db, freelancer_id)
+
+Also in backend/routers/milestones.py, add:
+
+POST /api/milestones/check-now
 - Depends on get_current_user_id
-- Fetch the contract doc filtered by _id AND freelancer_id (404 if not found
-  or not owned by this user)
-- Fetch its milestones (db.milestones.find({"contract_id": id, "freelancer_id": freelancer_id}))
-- Return {"contract": {...}, "milestones": [...]}
-
-In backend/routers/milestones.py, add:
-
-GET /api/milestones/{contract_id}
-- Depends on get_current_user_id
-- Return db.milestones.find({"contract_id": contract_id, "freelancer_id": freelancer_id})
-  as a list, 404 if the contract itself doesn't belong to this freelancer
-
-Both endpoints must filter by freelancer_id — no exceptions, per the
-handoff's data-model rule. Don't wire the Phase 4 lazy-check BackgroundTask
-into these yet — that's Phase 4's job, not this step's.
+- Calls run_pending_checks(db, freelancer_id) SYNCHRONOUSLY (not as a
+  BackgroundTask — this endpoint's whole purpose is an immediate result)
+- Returns {"triggered": n, "overdue_marked": n, "followups_sent": n} directly
+  from run_pending_checks' return value (adjust key names to match exactly
+  what run_pending_checks returns from 4.5)
 
 log updates CLAUDE.md and Plan.md with the exisiting format

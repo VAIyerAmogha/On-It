@@ -68,7 +68,7 @@ Start every session by reading PLAN.md, then this file.
 
 ## Current focus
 Last updated: 2026-07-09
-Active work: Phase 3 — Milestone extraction
+Active work: Phase 4 — State machine + lazy checks
 Recent completions:
 - FastAPI project scaffold (main.py, config.py, requirements.txt, .env.example) — completed
 - Pydantic models for all 6 collections created — completed
@@ -90,5 +90,13 @@ Recent completions:
 - lib/extractor.py: Retainer template creation (build_retainer_template) — completed
 - lib/extractor.py: Milestone CRUD orchestrator (extract_milestones, save_milestones) — completed
 - routers/contracts.py & routers/milestones.py: GET endpoints for contract and milestones — completed
+- lib/state_machine.py: state transitions, audit logging, InvalidTransitionError — completed
+- routers/milestones.py: PATCH /api/milestones/{id}/trigger endpoint — completed
+- lib/state_machine.py: mark_invoiced helper wrapper — completed
+- lib/state_machine.py: mark_paid with auto-triggering — completed
+- routers/milestones.py: PATCH /api/milestones/{id}/paid endpoint — completed
+- lib/state_machine.py: run_pending_checks() date trigger and followup logic — completed
+- routers/contracts.py & routers/milestones.py: BackgroundTasks added for lazy checks — completed
+- routers/milestones.py: POST /api/milestones/check-now manual fallback — completed
 Open questions / blockers:
 - None
