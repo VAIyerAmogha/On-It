@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
        localStorage.setItem('user', JSON.stringify(fallbackUser));
     }
 
-    router.push('/');
+    router.push('/dashboard');
   };
 
   const register = async (email: string, password: string, name: string) => {

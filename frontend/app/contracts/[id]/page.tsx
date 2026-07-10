@@ -14,9 +14,9 @@ interface Contract {
   client_name: string | null;
   contract_type: string | null;
   project_value: number | null;
-  currency: string | null;
   contract_date: string | null;
   extraction_status: string;
+  extraction_error?: string | null;
 }
 
 export default function ContractPage({ params }: { params: Promise<{ id: string }> }) {
@@ -44,6 +44,18 @@ export default function ContractPage({ params }: { params: Promise<{ id: string 
   useEffect(() => {
     fetchContractData();
   }, [id]);
+
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    
+    if (contract?.extraction_status === 'processing') {
+      timeout = setTimeout(() => {
+        fetchContractData();
+      }, 3000);
+    }
+
+    return () => clearTimeout(timeout);
+  }, [contract?.extraction_status, id]);
 
   const handleTrigger = async (milestoneId: string) => {
     await apiFetch(`/api/milestones/${milestoneId}/trigger`, { method: 'PATCH' });
@@ -85,7 +97,22 @@ export default function ContractPage({ params }: { params: Promise<{ id: string 
       <div className="h-full flex items-center justify-center min-h-[60vh]">
         <div className="glass-surface p-8 rounded-3xl text-center">
           <h2 className="text-xl font-bold mb-4">{error || 'Contract not found'}</h2>
-          <Link href="/" className="text-accent-600 dark:text-accent-400 hover:underline">Return to Dashboard</Link>
+          <Link href="/dashboard" className="text-accent-600 dark:text-accent-400 hover:underline">Return to Dashboard</Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (contract.extraction_status === 'failed') {
+    return (
+      <div className="h-full flex items-center justify-center min-h-[60vh]">
+        <div className="glass-surface p-8 rounded-3xl text-center max-w-lg">
+          <h2 className="text-xl font-bold mb-4 text-red-500">Extraction Failed</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">{contract.extraction_error || 'An unknown error occurred during processing. Please ensure this is a valid contract document.'}</p>
+          <div className="flex justify-center gap-4">
+            <Link href="/dashboard" className="px-4 py-2 text-gray-500 hover:text-gray-900 transition-colors font-medium">Dashboard</Link>
+            <Link href="/contracts/upload" className="px-4 py-2 bg-accent-500 text-white rounded-xl hover:bg-accent-600 transition-colors font-medium shadow-sm">Upload Again</Link>
+          </div>
         </div>
       </div>
     );
@@ -93,7 +120,7 @@ export default function ContractPage({ params }: { params: Promise<{ id: string 
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
-      <Link href="/" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-medium">
+      <Link href="/dashboard" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-medium">
         <ArrowLeft className="w-4 h-4 mr-1.5" />
         Dashboard
       </Link>

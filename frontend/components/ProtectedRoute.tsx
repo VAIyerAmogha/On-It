@@ -10,7 +10,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!isLoading && !token && !pathname.startsWith('/auth')) {
+    if (!isLoading && !token && !pathname.startsWith('/auth') && pathname !== '/') {
       router.push('/auth/login');
     }
   }, [token, isLoading, pathname, router]);
@@ -20,7 +20,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   // If not authenticated and trying to access protected route, render nothing while redirecting
-  if (!token && !pathname.startsWith('/auth')) {
+  if (!token && !pathname.startsWith('/auth') && pathname !== '/') {
     return null;
   }
 

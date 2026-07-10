@@ -27,7 +27,7 @@ export default function RootLayout({
       className={`${inter.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex font-sans relative">
+      <body className="min-h-full w-full flex font-sans relative">
         <ThemeProvider>
           <AuthProvider>
             <ProtectedRoute>

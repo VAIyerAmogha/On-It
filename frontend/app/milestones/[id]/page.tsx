@@ -97,7 +97,7 @@ export default function MilestonePage({ params }: { params: Promise<{ id: string
       <div className="flex justify-center items-center min-h-[60vh] max-w-3xl mx-auto">
         <div className="glass-surface p-12 rounded-3xl text-center w-full">
           <h2 className="text-xl font-bold mb-4">{error || 'Milestone not found'}</h2>
-          <Link href="/" className="text-accent-500 font-medium hover:underline flex items-center justify-center gap-2">
+          <Link href="/dashboard" className="text-accent-500 font-medium hover:underline flex items-center justify-center gap-2">
             <ArrowLeft className="w-4 h-4" />
             Back to Dashboard
           </Link>
@@ -114,7 +114,7 @@ export default function MilestonePage({ params }: { params: Promise<{ id: string
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
-      <Link href={contract ? `/contracts/${contract._id}` : '/'} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-medium">
+      <Link href={contract ? `/contracts/${contract._id}` : '/dashboard'} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-medium">
         <ArrowLeft className="w-4 h-4 mr-1.5" />
         Back to Contract
       </Link>

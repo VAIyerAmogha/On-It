@@ -9,6 +9,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAuthRoute = pathname.startsWith('/auth');
 
+  const isLandingRoute = pathname === '/';
+
+  if (isLandingRoute) {
+    return <>{children}</>;
+  }
+
   if (isAuthRoute) {
     return (
       <main className="min-h-screen w-full flex items-center justify-center p-4">

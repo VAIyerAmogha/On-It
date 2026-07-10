@@ -122,5 +122,9 @@ Recent completions:
 - Frontend milestone detail view: Live invoice pre-fill form, client-side GST calculation, linking to generated invoices — completed
 - Frontend Contract QA: Slide-over drawer interface, real-time RAG question answering, low faithfulness UI warnings — completed
 - Frontend Settings page: Segmented glass cards for profile/bank/email config, write-only password handling, calm success states — completed
+- Frontend Invoice page: PDF preview and download object URL blob — completed
+- Frontend Landing page: Public hero layout, dashboard routing guards updated — completed
+- Bank details removed globally per requirement changes — completed
+- Bug: Fixed scanned PDF extraction silent failure (backend exception tracking + frontend polling) — completed
 Open questions / blockers:
 - None

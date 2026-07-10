@@ -72,7 +72,7 @@ export default function MilestoneCard({ milestone, onTrigger, onInvoice, onPaid 
       <div className="flex items-center justify-between mb-6 mt-auto">
         <div>
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Trigger Type</p>
-          <p className="text-sm font-medium capitalize">{milestone.trigger_type.replace('_', ' ')}</p>
+          <p className="text-sm font-medium capitalize">{(milestone.trigger_type || 'unknown').replace('_', ' ')}</p>
         </div>
         <div className="text-right">
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Amount</p>

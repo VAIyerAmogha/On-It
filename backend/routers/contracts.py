@@ -28,11 +28,24 @@ def process_ingestion(contract_id: str, temp_path: str, filename: str):
         classification = classify_contract(full_text)
         contract_type = classification.get("contract_type", "unsupported")
         
+        try:
+            from lib.extractor import extract_contract_metadata
+        except ImportError:
+            from backend.lib.extractor import extract_contract_metadata
+            
+        metadata = extract_contract_metadata(full_text)
+        
         # 3. Update contract doc
         db.contracts.update_one(
             {"_id": ObjectId(contract_id)},
             {"$set": {
-                "contract_type": contract_type
+                "contract_type": contract_type,
+                "project_name": metadata.get("project_name"),
+                "client_name": metadata.get("client_name"),
+                "project_value": metadata.get("project_value"),
+                "project_value_confidence": metadata.get("project_value_confidence", 0.0),
+                "currency": metadata.get("currency"),
+                "contract_date": metadata.get("contract_date")
             }}
         )
         
@@ -72,7 +85,7 @@ def process_ingestion(contract_id: str, temp_path: str, filename: str):
             {"_id": ObjectId(contract_id)},
             {"$set": {
                 "extraction_status": "failed",
-                "error_message": str(e)
+                "extraction_error": str(e)
             }}
         )
     finally:
@@ -163,3 +176,14 @@ async def get_contract(id: str, freelancer_id: str = Depends(get_current_user_id
         m["_id"] = str(m["_id"])
         
     return {"contract": contract, "milestones": milestones}
+
+@router.delete("/{id}")
+async def delete_contract(id: str, freelancer_id: str = Depends(get_current_user_id)):
+    db = get_db()
+    result = db.contracts.delete_one({"_id": ObjectId(id), "freelancer_id": freelancer_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Contract not found")
+        
+    # Also delete associated milestones
+    db.milestones.delete_many({"contract_id": id, "freelancer_id": freelancer_id})
+    return {"message": "Contract deleted successfully"}

@@ -12,10 +12,6 @@ export default function SettingsPage() {
     name: '',
     address: '',
     gstin: '',
-    bank_name: '',
-    account_number: '',
-    ifsc: '',
-    upi_id: '',
     gmail_address: '',
     gmail_app_password: '', // Kept empty initially (write-only)
     default_gst_rate: 0.18,
@@ -37,10 +33,6 @@ export default function SettingsPage() {
           name: data.name || '',
           address: data.address || '',
           gstin: data.gstin || '',
-          bank_name: data.bank_name || '',
-          account_number: data.account_number || '',
-          ifsc: data.ifsc || '',
-          upi_id: data.upi_id || '',
           gmail_address: data.gmail_address || '',
           gmail_app_password: '', // Never populate from backend
           default_gst_rate: data.default_gst_rate ?? 0.18,
@@ -175,63 +167,6 @@ export default function SettingsPage() {
                 onChange={handleChange}
                 className="w-full px-4 py-2.5 bg-white/50 dark:bg-black/50 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:border-accent-500 transition-colors"
                 placeholder="123 Freelancer Street, City, State, ZIP"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Bank Details Group */}
-        <div className="glass-surface p-8 rounded-3xl">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-accent-500/10 flex items-center justify-center text-accent-600 dark:text-accent-400">
-              <Landmark className="w-5 h-5" />
-            </div>
-            <h2 className="text-xl font-bold">Bank Details</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Bank Name</label>
-              <input
-                type="text"
-                name="bank_name"
-                value={formData.bank_name}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white/50 dark:bg-black/50 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:border-accent-500 transition-colors"
-                placeholder="HDFC Bank"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">IFSC Code</label>
-              <input
-                type="text"
-                name="ifsc"
-                value={formData.ifsc}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white/50 dark:bg-black/50 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:border-accent-500 transition-colors"
-                placeholder="HDFC0001234"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Account Number</label>
-              <input
-                type="text"
-                name="account_number"
-                value={formData.account_number}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white/50 dark:bg-black/50 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:border-accent-500 transition-colors"
-                placeholder="50100012345678"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">UPI ID</label>
-              <input
-                type="text"
-                name="upi_id"
-                value={formData.upi_id}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white/50 dark:bg-black/50 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:border-accent-500 transition-colors"
-                placeholder="name@upi"
               />
             </div>
           </div>

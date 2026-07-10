@@ -411,7 +411,7 @@ FOLLOWUP_SCHEDULE_DAYS = [-3, 0, 7, 14, 30]
 36. [x] Dashboard: contract list, milestone status view
 37. [x] Contract upload flow + processing indicator
 38. [x] Milestone detail + trigger/paid actions
-39. Invoice preview + PDF download
+39. [x] Invoice preview + PDF download
 40. [x] Contract QA chat interface
 41. [x] Settings page
 

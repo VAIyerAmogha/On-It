@@ -8,10 +8,6 @@ class Profile(BaseModel):
     name: str
     address: str
     gstin: str
-    bank_name: str
-    account_number: str
-    ifsc: str
-    upi_id: str
     gmail_address: str
     gmail_app_password: str
     default_gst_rate: float
