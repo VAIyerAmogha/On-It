@@ -32,8 +32,7 @@ def process_ingestion(contract_id: str, temp_path: str, filename: str):
         db.contracts.update_one(
             {"_id": ObjectId(contract_id)},
             {"$set": {
-                "contract_type": contract_type,
-                "extraction_status": "ingested"
+                "contract_type": contract_type
             }}
         )
         

@@ -1,0 +1,57 @@
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
+:root {
+  --background: #f9f9fb; /* Matte white/frosted neutral */
+  --foreground: #111111;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #111114; /* Graphite/charcoal */
+    --foreground: #f9f9fb;
+  }
+}
+
+:root.dark {
+  --background: #111114;
+  --foreground: #f9f9fb;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+@layer components {
+  .glass-surface {
+    @apply backdrop-blur-md bg-glass-light border border-white/20 shadow-lg shadow-black/5;
+  }
+
+  .dark .glass-surface {
+    @apply bg-glass-dark border-white/10 shadow-black/20;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in-up {
+    animation: fadeInUp 0.4s ease-out forwards;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

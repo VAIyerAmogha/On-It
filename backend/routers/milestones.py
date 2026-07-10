@@ -11,6 +11,29 @@ except ImportError:
     
 router = APIRouter()
 
+@router.get("/detail/{id}")
+async def get_milestone_detail(id: str, freelancer_id: str = Depends(get_current_user_id)):
+    db = get_db()
+    try:
+        query_id = ObjectId(id)
+    except Exception:
+        query_id = id
+        
+    milestone = db.milestones.find_one({"_id": query_id, "freelancer_id": freelancer_id})
+    if not milestone:
+        raise HTTPException(status_code=404, detail="Milestone not found")
+        
+    contract = db.contracts.find_one({"_id": ObjectId(milestone.get("contract_id", "")), "freelancer_id": freelancer_id})
+    invoice = db.invoices.find_one({"milestone_id": id, "freelancer_id": freelancer_id})
+    
+    milestone["_id"] = str(milestone["_id"])
+    if contract:
+        contract["_id"] = str(contract["_id"])
+    if invoice:
+        invoice["_id"] = str(invoice["_id"])
+        
+    return {"milestone": milestone, "contract": contract, "invoice": invoice}
+
 @router.get("/{contract_id}")
 async def get_milestones(
     contract_id: str, 

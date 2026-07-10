@@ -67,8 +67,8 @@ Start every session by reading PLAN.md, then this file.
     - Don't block the upload request on the extraction pipeline — it must run as an async background task
 
 ## Current focus
-Last updated: 2026-07-09
-Active work: Phase 4 — State machine + lazy checks
+Last updated: 2026-07-10
+Active work: Phase 7 — Frontend
 Recent completions:
 - FastAPI project scaffold (main.py, config.py, requirements.txt, .env.example) — completed
 - Pydantic models for all 6 collections created — completed
@@ -113,5 +113,14 @@ Recent completions:
 - lib/rag.py: faithfulness NLI check (score_faithfulness) — completed
 - lib/rag.py: end-to-end RAG orchestration (ask_contract) — completed
 - routers/contract_qa.py: POST /api/contracts/{id}/ask endpoint — completed
+- Frontend design system foundation: Tailwind config, Inter font, glass-surface utility, light/dark ThemeContext — completed
+- Frontend persistent app shell: Sidebar, Header, HealthPing for cold starts, layout structure, page transition animations — completed
+- Frontend authentication: AuthContext (JWT via localStorage), api.ts fetch wrapper, login/register pages, ProtectedRoute guard — completed
+- Frontend dashboard: Grid of responsive glass cards, contract fetch wrapper, skeleton loading state, empty state — completed
+- Frontend milestones: MilestoneCard component, Contract detail page, trigger/invoice/paid action wiring — completed
+- Frontend contract upload: Multipart file upload UI, validation, drag-and-drop styling, background processing transition — completed
+- Frontend milestone detail view: Live invoice pre-fill form, client-side GST calculation, linking to generated invoices — completed
+- Frontend Contract QA: Slide-over drawer interface, real-time RAG question answering, low faithfulness UI warnings — completed
+- Frontend Settings page: Segmented glass cards for profile/bank/email config, write-only password handling, calm success states — completed
 Open questions / blockers:
 - None

@@ -1,15 +1,18 @@
 Refer CLAUDE.md and Plan.md. 
 
-In backend/routers/contract_qa.py, add:
+Build pages/settings.tsx:
 
-POST /api/contracts/{id}/ask
-
-- Depends on get_current_user_id, ownership check on the contract (404 if
-  not found/not owned)
-- 400 if contract["indexed_for_rag"] != True (with a message like
-  "This contract is still being indexed — try again shortly")
-- Body: {"question": string}
-- Call lib.rag.ask_contract(db, id, freelancer_id, question)
-- Return the result dict as-is (answer, cited_sections, faithfulness_score)
+- GET /api/settings on mount, populate a form (glass surface, sectioned
+  into logical groups: Profile, Bank Details, Invoicing, Email Templates —
+  each section its own subtle glass card rather than one giant form)
+- Fields: name, address, gstin, bank_name, account_number, ifsc, upi_id,
+  gmail_address, default_gst_rate, invoice_prefix
+- On submit, PUT /api/settings with the full updated payload, show a calm
+  success confirmation (subtle toast or inline check + fade, not a jarring
+  banner)
+- Keep gmail_app_password write-only (a password-type input that's never
+  pre-filled with the existing stored value, and only sent to the backend
+  if the user actually typed a new one — don't round-trip the stored
+  secret back into the form)
 
 log updates CLAUDE.md and Plan.md with the exisiting format

@@ -406,14 +406,14 @@ FOLLOWUP_SCHEDULE_DAYS = [-3, 0, 7, 14, 30]
 33. [x] POST /contracts/{id}/ask endpoint
 
 ### Phase 7 — Frontend
-34. Next.js scaffold, Tailwind, react-pdf
-35. Auth pages (register/login)
-36. Dashboard: contract list, milestone status view
-37. Contract upload flow + processing indicator
-38. Milestone detail + trigger/paid actions
+34. [x] Next.js scaffold, Tailwind, react-pdf + design system foundation
+35. [x] Auth pages (register/login)
+36. [x] Dashboard: contract list, milestone status view
+37. [x] Contract upload flow + processing indicator
+38. [x] Milestone detail + trigger/paid actions
 39. Invoice preview + PDF download
-40. Contract QA chat interface
-41. Settings page
+40. [x] Contract QA chat interface
+41. [x] Settings page
 
 ### Phase 8 — Evaluation + hardening
 42. Test set: 20 freelance contracts across four types
