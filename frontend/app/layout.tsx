@@ -5,6 +5,7 @@ import { ThemeProvider } from "../components/ThemeContext";
 import { AuthProvider } from "../context/AuthContext";
 import { ProtectedRoute } from "../components/ProtectedRoute";
 import AppLayout from "../components/AppLayout";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -28,15 +29,17 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full w-full flex font-sans relative">
-        <ThemeProvider>
-          <AuthProvider>
-            <ProtectedRoute>
-              <AppLayout>
-                {children}
-              </AppLayout>
-            </ProtectedRoute>
-          </AuthProvider>
-        </ThemeProvider>
+        <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}>
+          <ThemeProvider>
+            <AuthProvider>
+              <ProtectedRoute>
+                <AppLayout>
+                  {children}
+                </AppLayout>
+              </ProtectedRoute>
+            </AuthProvider>
+          </ThemeProvider>
+        </GoogleOAuthProvider>
       </body>
     </html>
   );

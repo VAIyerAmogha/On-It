@@ -389,6 +389,7 @@ FOLLOWUP_SCHEDULE_DAYS = [-3, 0, 7, 14, 30]
 ### Phase 7 — Frontend
 34. [x] Next.js scaffold, Tailwind, react-pdf + design system foundation
 35. [x] Auth pages (register/login)
+35b. [x] Auth pages: Google Sign-in alongside email/password
 36. [x] Dashboard: contract list, milestone status view
 37. [x] Contract upload flow + processing indicator
 37b. [x] Contract PDF viewer page integration

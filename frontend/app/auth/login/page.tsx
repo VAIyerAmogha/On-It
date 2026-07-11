@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, googleLogin } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -22,6 +23,16 @@ export default function LoginPage() {
       setError(err.message || 'Failed to login');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    try {
+      if (credentialResponse.credential) {
+        await googleLogin(credentialResponse.credential);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Google sign in failed');
     }
   };
 
@@ -67,6 +78,22 @@ export default function LoginPage() {
           {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Sign In'}
         </button>
       </form>
+      
+      <div className="mt-6 flex items-center justify-center space-x-4">
+        <div className="h-px bg-gray-300 dark:bg-gray-700 w-full" />
+        <span className="text-gray-500 text-sm whitespace-nowrap">or continue with</span>
+        <div className="h-px bg-gray-300 dark:bg-gray-700 w-full" />
+      </div>
+      
+      <div className="mt-6 flex justify-center">
+        <GoogleLogin
+          onSuccess={handleGoogleSuccess}
+          onError={() => setError('Google sign in failed. Please try again.')}
+          theme="outline"
+          size="large"
+          text="continue_with"
+        />
+      </div>
       
       <p className="text-center text-sm text-gray-500 mt-6">
         Don't have an account?{' '}

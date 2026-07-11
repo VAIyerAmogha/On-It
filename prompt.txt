@@ -1,54 +1,64 @@
 Refer CLAUDE.md and Plan.md. 
 
-The invoice page and PDF export still aren't showing up. Don't ask me for
-milestone IDs, invoice IDs, or auth tokens — you have full access to the
-codebase and the terminal, so get everything you need yourself:
+Add "Sign in with Google" to On-It, alongside the existing email/password
+auth — don't replace it.
 
+BACKEND:
 
-Register your own throwaway test user (or reuse one already in the DB),
-upload the sample fixture already in backend/tests/fixtures/, generate
-a milestone/invoice through the actual API, and use the IDs/token that
-produces. Or just read the source files directly — you don't need to
-run anything to catch a field-name mismatch or a missing/misnamed file.
+1. pip install google-auth, add to requirements.txt
 
+2. In config.py, add GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 
-Do this, in order
+3. In models/profiles.py, make password_hash Optional[str] = None (Google
+   accounts won't have one) and add:
+   - auth_provider: str = "email"  (values: "email" | "google")
+   - google_sub: Optional[str] = None  (Google's unique user id)
+   - email_verified: bool = False
 
+4. Add POST /api/auth/google in routers/auth.py:
+   - Body: {"credential": string}  (the ID token from Google's frontend button)
+   - Verify it: from google.oauth2 import id_token; from google.auth.transport
+     import requests as google_requests; 
+     id_info = id_token.verify_oauth2_token(credential, google_requests.Request(), config.GOOGLE_CLIENT_ID)
+   - Raise 401 if verification fails (invalid signature/audience/expired)
+   - Extract email, name, sub (google's user id) from id_info
+   - Look up db.profiles by email:
+     - If not found: create a new profile with email, name, auth_provider="google",
+       google_sub=sub, email_verified=True, invoice_counter=1, and any other
+       required defaults the existing register endpoint sets
+     - If found and auth_provider == "email": link the account — set
+       google_sub on the existing profile (don't create a duplicate), keep
+       their existing password_hash so they can still also log in manually
+     - If found and auth_provider == "google": just proceed
+   - Issue the same JWT the existing login endpoint issues (reuse that
+     function, don't duplicate JWT logic), return it in the same response
+     shape as POST /api/auth/login
 
-Read the actual files, don't assume. Open every file in this chain
-and check them against each other:
+5. In the existing POST /api/auth/login (email/password), add a check:
+   if profile.password_hash is None, return a clear 400 error like
+   "This account uses Google Sign-In — use the Google button instead" —
+   don't let it crash trying to verify a password hash that doesn't exist.
 
-The backend invoice-creation endpoint (routers/milestones.py) —
-what shape does it actually return? Is _id serialized as a plain
-string, or is it leaking a raw ObjectId?
-Whatever frontend code handles the response after generating an
-invoice — does it read .id, ._id, or .invoice_id? Does that
-match what the backend actually sends? This exact mismatch is the
-single most likely bug — check it first.
-Does pages/invoices/[id].tsx exist, at exactly that path? Next.js
-Pages Router is filename-sensitive; a misnamed file 404s silently.
-Does a "Generate Invoice" button/handler actually exist in the code
-and actually call the endpoint and actually navigate afterward — or
-is one of those three missing/dead code?
-Does components/InvoicePreview.tsx exist and get imported into the
-invoices page, with the pdfjs worker actually configured?
-Does a Download button exist anywhere in the frontend code at all —
-search for it. If it was never added, that's simply missing — build
-it, don't assume it's "broken."
+FRONTEND:
 
+1. npm install @react-oauth/google
 
+2. In pages/_app.tsx, wrap the app in
+   <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}>
 
-Fix whatever you find, using your own runtime test (register →
-upload → generate invoice → visit the page → download) to confirm the
-fix actually works, end to end, before considering it done.
-Download button spec (build this if it doesn't exist): a visible
-"Download PDF" button that fetches GET /api/invoices/{id}/pdf with
-the Authorization header attached, reads it as a blob, and triggers a
-real file download via an object URL — a bare <a href> won't carry
-auth and will fail.
+3. On pages/auth/login.tsx and pages/auth/register.tsx, add a
+   <GoogleLogin> button below the existing form, with a visual divider
+   ("or continue with") between them. Style the button/divider to match
+   the existing glass design system — the library's default button can be
+   restyled or wrapped; keep sizing/spacing consistent with the email/password
+   form above it, don't let it look like a bolted-on widget.
 
+4. On success (onSuccess callback receives credentialResponse.credential):
+   POST it to /api/auth/google, store the returned JWT the same way the
+   existing AuthContext.login() does, navigate to /dashboard.
 
-Report back concretely what was actually broken and what you changed —
-not just "fixed it."
+5. On error (onError callback), show a calm inline error message, not a
+   crash.
+
 
 log updates CLAUDE.md and Plan.md with the exisiting format

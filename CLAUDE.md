@@ -133,5 +133,6 @@ Recent completions:
 - Bug: Fixed invoice navigation from MilestoneCard — root causes: (1) invoice lookup in contracts.py/milestones.py filtered by freelancer_id causing silent mismatch, removed to use milestone_id only; (2) send_invoice_email in create_invoice was not wrapped in try/except — email failure propagated and caused 500 before frontend could read success; (3) handleInvoice in contract page didn't use try/finally so fetchContractData was skipped on any error; (4) Added MilestoneCard self-fetch fallback via new GET /api/invoices/by-milestone/{milestone_id} endpoint when invoice_id is missing from milestone list — all fixed — completed
 - Bug: Fixed dashboard showing 'Untitled Project' — added title field to Contract interface and updated card to use title || project_name || fallback, matching the contract detail page — completed
 - Bug: Fixed delete contract always showing error — contract was deleted BEFORE being read, so the file_url reference caused a NameError (500) even though deletion succeeded; fixed by fetching contract doc first, then deleting — completed
+- Feature: Added "Sign in with Google" OAuth flow to frontend and backend, keeping email/password support — completed
 Open questions / blockers:
 - None

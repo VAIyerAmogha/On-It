@@ -14,6 +14,7 @@ interface AuthContextType {
   token: string | null;
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
+  googleLogin: (credential: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
@@ -70,6 +71,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push('/dashboard');
   };
 
+  const googleLogin = async (credential: string) => {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential })
+    });
+    
+    if (!response.ok) {
+        throw new Error('Google sign in failed');
+    }
+    const data = await response.json();
+    const newToken = data.access_token;
+    
+    localStorage.setItem('token', newToken);
+    setToken(newToken);
+    
+    try {
+      const userData = await apiFetch('/api/settings', {
+        headers: { 'Authorization': `Bearer ${newToken}` }
+      });
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+    } catch (e) {
+       // Proceed anyway if settings fetch fails
+    }
+
+    router.push('/dashboard');
+  };
+
   const register = async (email: string, password: string, name: string) => {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/auth/register`, {
       method: 'POST',
@@ -93,7 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, login, register, logout, isLoading }}>
+    <AuthContext.Provider value={{ token, user, login, googleLogin, register, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

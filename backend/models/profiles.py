@@ -4,7 +4,10 @@ from pydantic import BaseModel, Field
 class Profile(BaseModel):
     id: str | None = Field(default=None, alias="_id")
     email: str
-    password_hash: str
+    password_hash: str | None = None
+    auth_provider: str = "email"
+    google_sub: str | None = None
+    email_verified: bool = False
     name: str
     address: str
     gstin: str

@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 OCR_SPACE_FREE_ENDPOINT = "https://api.ocr.space/parse/image"
 OCR_TIMEOUT_SECONDS = 30
 OCR_SPACE_API_KEY = os.getenv("OCR_SPACE_API_KEY")

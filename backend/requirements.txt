@@ -11,3 +11,4 @@ python-docx
 pdfplumber
 python-multipart
 reportlab
+google-auth
