@@ -138,5 +138,7 @@ Recent completions:
 - Feature: Updated RAG QA pipeline in `lib/rag.py` to merge realtime `progress_summary` state with contract context for natural language milestone status answers, updating both generation and NLI faithfulness checks — completed
 - Feature: Removed automatic invoice email sending, added dedicated POST /api/invoices/{id}/send and GET /api/invoices/{id}/email-preview endpoints for manual control over email dispatch — completed
 - Feature: Added Invoice Email Preview modal to frontend for manual sending with editable subject and body — completed
+- Feature: Refactored email dispatch into a shared `email_utils.py` and implemented manual email verification for local signups (`/api/auth/register` sends token, no JWT), added `/verify-email` and `/resend-verification` endpoints, and enforced verification check on login.
+- Feature: Added frontend verification flows: updated Register and Login pages with glass-surface calm states for "check inbox" and "please verify email", added `/verify-email` page for token checking, and hooked up `resendVerificationEmail` api fetch helper.
 Open questions / blockers:
 - None

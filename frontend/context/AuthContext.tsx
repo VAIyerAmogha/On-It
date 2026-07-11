@@ -48,7 +48,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     
     if (!response.ok) {
-        throw new Error('Invalid credentials');
+        const errorData = await response.json().catch(() => null);
+        if (errorData && errorData.detail && typeof errorData.detail === 'object' && errorData.detail.error_code === 'EMAIL_NOT_VERIFIED') {
+           throw new Error('EMAIL_NOT_VERIFIED');
+        }
+        throw new Error(errorData?.detail || 'Invalid credentials');
     }
     const data = await response.json();
     const newToken = data.access_token;
@@ -110,8 +114,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
        const err = await response.json();
        throw new Error(err.detail || 'Registration failed');
     }
-    // Auto-login after registration
-    await login(email, password);
   };
 
   const logout = () => {

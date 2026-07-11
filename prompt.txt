@@ -1,40 +1,39 @@
 Refer CLAUDE.md and Plan.md. 
 
-Modify the Invoice Preview page component (locate the existing invoice
-detail/preview page from Phase 7 — do not create a duplicate page).
+Modify the existing register page, add a new verify-email page, and modify
+the existing login page. Follow the locked design system (glass-surface,
+Violet + Graphite, Lucide icons, calm non-alarming states).
 
-1. Add a "Send Invoice to Client" button, styled per the locked design
-   system (glass-surface, Violet + Graphite accent, Lucide icon — use
-   something like `Send` or `Mail`).
+1. Register page: on successful POST /api/auth/register (manual path),
+   since it no longer returns a JWT, do not redirect to the dashboard.
+   Instead show a calm "check your inbox" glass-surface state on the same
+   page (email icon, message telling them to click the link sent to
+   {email}). Include a "Resend verification email" link/button that calls
+   POST /api/auth/resend-verification with the registered email and shows
+   a brief confirmation toast/state (not an alarming error style even if
+   it silently no-ops server-side).
 
-2. On click, call GET /api/invoices/{id}/email-preview and open a modal
-   (glass-surface dialog, matching existing modal patterns already used
-   elsewhere in the app — e.g. the upload modal) showing:
-   - A read-only "To" field (client email) and "From" field (app Gmail
-     address) — these are not editable.
-   - An editable Subject input, pre-filled from the preview response.
-   - An editable Body textarea, pre-filled from the preview response.
-   - Two actions: "Cancel" (closes modal, discards edits) and
-     "Send" (confirms).
+2. New page pages/verify-email.tsx (Pages Router, matches existing routing
+   convention):
+   - Reads `token` from the query string.
+   - On mount, calls GET /api/auth/verify-email?token=... .
+   - Success: show a calm success state with a "Go to Login" button/link
+     to /auth/login.
+   - Failure (invalid or expired token): show a calm (not alarming) error
+     state explaining the link is invalid/expired, with a way to enter
+     their email and trigger resend-verification from this same page
+     (reuse the same resend call as the register page — don't duplicate
+     the fetch logic, share a small helper in api.ts).
 
-3. On "Send", call POST /api/invoices/{id}/send with the current
-   (possibly edited) subject/body from the modal's local state — do not
-   re-fetch the preview on submit, send exactly what's in the form.
+3. Login page: when POST /api/auth/login returns 403 with
+   error_code "EMAIL_NOT_VERIFIED", do not show the generic
+   wrong-credentials error state. Show a distinct message ("please verify
+   your email first") with a "Resend verification email" action, reusing
+   the same shared resend helper from api.ts. Google OAuth sign-in on this
+   same page is unaffected — only the manual-login error branch changes.
 
-4. Handle loading/success/error states calmly per the design system (no
-   alarming red error banners — muted, consistent with how low-faithfulness
-   QA states are styled). On success: close the modal, show a subtle
-   success state, and update the invoice's displayed sent_at / "sent"
-   status on the page without requiring a full page reload.
-
-5. If invoice.sent_at is already set when the page loads, change the
-   button label to "Resend Invoice to Client" (same flow, same modal) and
-   show the existing sent_at timestamp near the button so the user knows
-   it was already sent once.
-
-6. Do not add any new global state management — follow whatever local
-   state / existing data-fetching pattern (AuthContext-style fetch wrapper
-   via api.ts) the rest of the invoice page already uses.
+4. Do not add any new global state management — follow the existing
+   AuthContext / api.ts fetch wrapper pattern already used on these pages.
 
 
 log updates CLAUDE.md and Plan.md with the exisiting format

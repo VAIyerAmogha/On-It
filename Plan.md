@@ -404,6 +404,8 @@ FOLLOWUP_SCHEDULE_DAYS = [-3, 0, 7, 14, 30]
 41f. [x] Feature: Injected progress summary into RAG QA pipeline (`rag.py`) to allow natural language queries about live milestone and invoice statuses, validating with NLI against the merged JSON state context.
 41g. [x] Feature: Removed automatic email sending on invoice creation, added dedicated POST /api/invoices/{id}/send and GET /api/invoices/{id}/email-preview endpoints for manual control over email dispatch.
 41h. [x] Feature: Added "Send Invoice to Client" modal on the frontend Invoice Preview page to utilize the manual dispatch endpoints.
+41i. [x] Feature: Extracted email SMTP logic to `lib/email_utils.py` and added manual email verification flow (verification token generation on registration, `/verify-email`, `/resend-verification`, and login verification enforcement).
+41j. [x] Feature: Added frontend verification states: calm "check inbox" state on Register page, "please verify" error capture on Login page, and a new `/verify-email` page to process token links along with `resendVerificationEmail` helper in api.ts.
 
 ### Phase 8 — Evaluation + hardening
 42. Test set: 20 freelance contracts across four types

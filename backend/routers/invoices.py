@@ -15,12 +15,13 @@ try:
 except ImportError:
     from backend.lib.storage import retrieve_pdf, StorageError
 
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.application import MIMEApplication
 import datetime
 from datetime import timezone
+
+try:
+    from lib import email_utils
+except ImportError:
+    from backend.lib import email_utils
 
 try:
     from lib.invoice_gen import build_cover_note
@@ -173,24 +174,18 @@ async def send_invoice_email_manual(id: str, request: EmailSendRequest, freelanc
     except StorageError as e:
         raise HTTPException(status_code=404, detail=str(e))
         
-    msg = MIMEMultipart()
-    msg['From'] = config.GMAIL_ADDRESS
-    msg['To'] = client_email
-    msg['Subject'] = request.subject
-    msg.attach(MIMEText(request.body, 'plain'))
-    
-    attachment = MIMEApplication(pdf_bytes, _subtype="pdf")
-    attachment.add_header('Content-Disposition', 'attachment', filename=f"{invoice.get('invoice_number', 'invoice')}.pdf")
-    msg.attach(attachment)
-    
     now = datetime.datetime.now(timezone.utc)
     
     try:
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(config.GMAIL_ADDRESS, config.GMAIL_APP_PASSWORD)
-        server.send_message(msg)
-        server.quit()
+        email_utils.send_email(
+            to=client_email,
+            subject=request.subject,
+            body=request.body,
+            attachments=[{
+                "filename": f"{invoice.get('invoice_number', 'invoice')}.pdf",
+                "content": pdf_bytes
+            }]
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
         

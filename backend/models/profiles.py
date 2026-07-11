@@ -8,6 +8,8 @@ class Profile(BaseModel):
     auth_provider: str = "email"
     google_sub: str | None = None
     email_verified: bool = False
+    verification_token: str | None = None
+    verification_token_expires: datetime | None = None
     name: str
     address: str
     gstin: str
