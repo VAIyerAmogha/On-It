@@ -134,5 +134,9 @@ Recent completions:
 - Bug: Fixed dashboard showing 'Untitled Project' — added title field to Contract interface and updated card to use title || project_name || fallback, matching the contract detail page — completed
 - Bug: Fixed delete contract always showing error — contract was deleted BEFORE being read, so the file_url reference caused a NameError (500) even though deletion succeeded; fixed by fetching contract doc first, then deleting — completed
 - Feature: Added "Sign in with Google" OAuth flow to frontend and backend, keeping email/password support — completed
+- Feature: Added `build_progress_summary` utility in `lib/progress_context.py` for aggregation of milestone and invoice data — completed
+- Feature: Updated RAG QA pipeline in `lib/rag.py` to merge realtime `progress_summary` state with contract context for natural language milestone status answers, updating both generation and NLI faithfulness checks — completed
+- Feature: Removed automatic invoice email sending, added dedicated POST /api/invoices/{id}/send and GET /api/invoices/{id}/email-preview endpoints for manual control over email dispatch — completed
+- Feature: Added Invoice Email Preview modal to frontend for manual sending with editable subject and body — completed
 Open questions / blockers:
 - None

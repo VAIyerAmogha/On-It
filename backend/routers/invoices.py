@@ -15,6 +15,23 @@ try:
 except ImportError:
     from backend.lib.storage import retrieve_pdf, StorageError
 
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+import datetime
+from datetime import timezone
+
+try:
+    from lib.invoice_gen import build_cover_note
+except ImportError:
+    from backend.lib.invoice_gen import build_cover_note
+
+try:
+    import config
+except ImportError:
+    from backend import config
+
 router = APIRouter()
 
 @router.get("/by-milestone/{milestone_id}")
@@ -93,5 +110,103 @@ async def toggle_followup(id: str, request: FollowupActionRequest, freelancer_id
     db.invoices.update_one({"_id": query_id}, {"$set": {"followup_paused": is_paused}})
     
     invoice["followup_paused"] = is_paused
+    invoice["_id"] = str(invoice["_id"])
+    return invoice
+
+@router.get("/{id}/email-preview")
+async def get_email_preview(id: str, freelancer_id: str = Depends(get_current_user_id)):
+    db = get_db()
+    
+    try:
+        query_id = ObjectId(id)
+    except Exception:
+        query_id = id
+        
+    invoice = db.invoices.find_one({"_id": query_id, "freelancer_id": freelancer_id})
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+        
+    try:
+        preview = build_cover_note(db, id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+        
+    preview["from"] = config.GMAIL_ADDRESS
+    return preview
+
+class EmailSendRequest(BaseModel):
+    subject: str
+    body: str
+
+@router.post("/{id}/send")
+async def send_invoice_email_manual(id: str, request: EmailSendRequest, freelancer_id: str = Depends(get_current_user_id)):
+    db = get_db()
+    
+    try:
+        query_id = ObjectId(id)
+    except Exception:
+        query_id = id
+        
+    invoice = db.invoices.find_one({"_id": query_id, "freelancer_id": freelancer_id})
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+        
+    contract_id = invoice.get("contract_id")
+    try:
+        c_query_id = ObjectId(contract_id)
+    except Exception:
+        c_query_id = contract_id
+    contract = db.contracts.find_one({"_id": c_query_id})
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+        
+    client_email = contract.get("client_email") or (contract.get("client_contact") or {}).get("email")
+    if not client_email:
+        raise HTTPException(status_code=400, detail="Client email not found")
+        
+    pdf_file_id = invoice.get("pdf_file_id")
+    if not pdf_file_id:
+        raise HTTPException(status_code=404, detail="Invoice PDF not generated")
+        
+    try:
+        pdf_bytes = retrieve_pdf(db, pdf_file_id)
+    except StorageError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+        
+    msg = MIMEMultipart()
+    msg['From'] = config.GMAIL_ADDRESS
+    msg['To'] = client_email
+    msg['Subject'] = request.subject
+    msg.attach(MIMEText(request.body, 'plain'))
+    
+    attachment = MIMEApplication(pdf_bytes, _subtype="pdf")
+    attachment.add_header('Content-Disposition', 'attachment', filename=f"{invoice.get('invoice_number', 'invoice')}.pdf")
+    msg.attach(attachment)
+    
+    now = datetime.datetime.now(timezone.utc)
+    
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(config.GMAIL_ADDRESS, config.GMAIL_APP_PASSWORD)
+        server.send_message(msg)
+        server.quit()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
+        
+    if not invoice.get("sent_at"):
+        db.invoices.update_one({"_id": query_id}, {"$set": {"sent_at": now}})
+        invoice["sent_at"] = now
+        
+    db.followup_logs.insert_one({
+        "invoice_id": str(query_id),
+        "freelancer_id": freelancer_id,
+        "sent_at": now,
+        "template_name": "manual_send",
+        "recipient_email": client_email,
+        "subject": request.subject,
+        "delivery_status": "sent"
+    })
+    
     invoice["_id"] = str(invoice["_id"])
     return invoice

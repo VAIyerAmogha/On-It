@@ -1,64 +1,40 @@
 Refer CLAUDE.md and Plan.md. 
 
-Add "Sign in with Google" to On-It, alongside the existing email/password
-auth — don't replace it.
+Modify the Invoice Preview page component (locate the existing invoice
+detail/preview page from Phase 7 — do not create a duplicate page).
 
-BACKEND:
+1. Add a "Send Invoice to Client" button, styled per the locked design
+   system (glass-surface, Violet + Graphite accent, Lucide icon — use
+   something like `Send` or `Mail`).
 
-1. pip install google-auth, add to requirements.txt
+2. On click, call GET /api/invoices/{id}/email-preview and open a modal
+   (glass-surface dialog, matching existing modal patterns already used
+   elsewhere in the app — e.g. the upload modal) showing:
+   - A read-only "To" field (client email) and "From" field (app Gmail
+     address) — these are not editable.
+   - An editable Subject input, pre-filled from the preview response.
+   - An editable Body textarea, pre-filled from the preview response.
+   - Two actions: "Cancel" (closes modal, discards edits) and
+     "Send" (confirms).
 
-2. In config.py, add GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+3. On "Send", call POST /api/invoices/{id}/send with the current
+   (possibly edited) subject/body from the modal's local state — do not
+   re-fetch the preview on submit, send exactly what's in the form.
 
-3. In models/profiles.py, make password_hash Optional[str] = None (Google
-   accounts won't have one) and add:
-   - auth_provider: str = "email"  (values: "email" | "google")
-   - google_sub: Optional[str] = None  (Google's unique user id)
-   - email_verified: bool = False
+4. Handle loading/success/error states calmly per the design system (no
+   alarming red error banners — muted, consistent with how low-faithfulness
+   QA states are styled). On success: close the modal, show a subtle
+   success state, and update the invoice's displayed sent_at / "sent"
+   status on the page without requiring a full page reload.
 
-4. Add POST /api/auth/google in routers/auth.py:
-   - Body: {"credential": string}  (the ID token from Google's frontend button)
-   - Verify it: from google.oauth2 import id_token; from google.auth.transport
-     import requests as google_requests; 
-     id_info = id_token.verify_oauth2_token(credential, google_requests.Request(), config.GOOGLE_CLIENT_ID)
-   - Raise 401 if verification fails (invalid signature/audience/expired)
-   - Extract email, name, sub (google's user id) from id_info
-   - Look up db.profiles by email:
-     - If not found: create a new profile with email, name, auth_provider="google",
-       google_sub=sub, email_verified=True, invoice_counter=1, and any other
-       required defaults the existing register endpoint sets
-     - If found and auth_provider == "email": link the account — set
-       google_sub on the existing profile (don't create a duplicate), keep
-       their existing password_hash so they can still also log in manually
-     - If found and auth_provider == "google": just proceed
-   - Issue the same JWT the existing login endpoint issues (reuse that
-     function, don't duplicate JWT logic), return it in the same response
-     shape as POST /api/auth/login
+5. If invoice.sent_at is already set when the page loads, change the
+   button label to "Resend Invoice to Client" (same flow, same modal) and
+   show the existing sent_at timestamp near the button so the user knows
+   it was already sent once.
 
-5. In the existing POST /api/auth/login (email/password), add a check:
-   if profile.password_hash is None, return a clear 400 error like
-   "This account uses Google Sign-In — use the Google button instead" —
-   don't let it crash trying to verify a password hash that doesn't exist.
-
-FRONTEND:
-
-1. npm install @react-oauth/google
-
-2. In pages/_app.tsx, wrap the app in
-   <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}>
-
-3. On pages/auth/login.tsx and pages/auth/register.tsx, add a
-   <GoogleLogin> button below the existing form, with a visual divider
-   ("or continue with") between them. Style the button/divider to match
-   the existing glass design system — the library's default button can be
-   restyled or wrapped; keep sizing/spacing consistent with the email/password
-   form above it, don't let it look like a bolted-on widget.
-
-4. On success (onSuccess callback receives credentialResponse.credential):
-   POST it to /api/auth/google, store the returned JWT the same way the
-   existing AuthContext.login() does, navigate to /dashboard.
-
-5. On error (onError callback), show a calm inline error message, not a
-   crash.
+6. Do not add any new global state management — follow whatever local
+   state / existing data-fetching pattern (AuthContext-style fetch wrapper
+   via api.ts) the rest of the invoice page already uses.
 
 
 log updates CLAUDE.md and Plan.md with the exisiting format

@@ -1,7 +1,12 @@
 1. invoice gen ---- Done
-2. dates and calender
-3. context of completion to the groq chatbot
-4. email sending
-5. UI enhancements
+3. context of completion to the groq chatbot ---- Done
 6. email verification for signing in
-7. oauth
+2. dates and current date checking and calender
+4. email sending ---- Done
+5. UI enhancements
+7. oauth ---- DONE
+8. new user must put in details about the business like gst number, org name, address.wire them to the invoice and show in dashboard
+9. invoice is still showing to none
+10. dashboard showing 2 out of 5
+11. cleanup of project 
+

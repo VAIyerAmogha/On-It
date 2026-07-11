@@ -400,6 +400,10 @@ FOLLOWUP_SCHEDULE_DAYS = [-3, 0, 7, 14, 30]
 41b. [x] Bug: Invoice navigation from MilestoneCard — 4 root causes fixed: (1) invoice lookup used freelancer_id filter causing silent mismatch → now uses milestone_id only; (2) send_invoice_email not wrapped in try/except → email failure crashed create_invoice endpoint; (3) handleInvoice not using try/finally → fetchContractData skipped on any error; (4) Added GET /api/invoices/by-milestone/{milestone_id} endpoint + MilestoneCard self-fetch fallback for resilience
 41c. [x] Bug: Dashboard card showing 'Untitled Project' — title field missing from Contract interface; card now uses title || project_name || fallback (and client_contact.name || client_name for client)
 41d. [x] Bug: Delete contract endpoint always returning 500 — referenced `contract` variable before it was fetched; fixed by reading contract doc before deleting it so file_url is available for GridFS cleanup
+41e. [x] Feature: Added `build_progress_summary` utility in `lib/progress_context.py` to aggregate milestone status, invoice data, and project-level totals into a strict JSON-serializable context.
+41f. [x] Feature: Injected progress summary into RAG QA pipeline (`rag.py`) to allow natural language queries about live milestone and invoice statuses, validating with NLI against the merged JSON state context.
+41g. [x] Feature: Removed automatic email sending on invoice creation, added dedicated POST /api/invoices/{id}/send and GET /api/invoices/{id}/email-preview endpoints for manual control over email dispatch.
+41h. [x] Feature: Added "Send Invoice to Client" modal on the frontend Invoice Preview page to utilize the manual dispatch endpoints.
 
 ### Phase 8 — Evaluation + hardening
 42. Test set: 20 freelance contracts across four types
