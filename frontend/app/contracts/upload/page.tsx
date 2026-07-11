@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { UploadCloud, File, Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -10,16 +10,59 @@ export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
+  const [contractId, setContractId] = useState<string | null>(null);
+  const [extractionStatus, setExtractionStatus] = useState<string | null>(null);
+  const [loadingText, setLoadingText] = useState('Reading your contract...');
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const { token } = useAuth();
+
+  useEffect(() => {
+    if (extractionStatus === 'processing' && contractId && token) {
+      const interval = setInterval(async () => {
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/contracts/${contractId}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const status = data.contract.extraction_status;
+            
+            if (status === 'extracted' || status === 'review_required') {
+              setExtractionStatus(status);
+              router.push(`/contracts/${contractId}`);
+            } else if (status === 'failed') {
+              setExtractionStatus('failed');
+              setError(data.contract.extraction_error || 'An error occurred during processing. Please ensure this is a valid contract document.');
+            }
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }, 3000);
+
+      const texts = ["Reading your contract...", "Classifying contract type...", "Extracting milestones...", "Resolving payment terms..."];
+      let i = 0;
+      const textInterval = setInterval(() => {
+        i = (i + 1) % texts.length;
+        setLoadingText(texts[i]);
+      }, 4000);
+
+      return () => {
+        clearInterval(interval);
+        clearInterval(textInterval);
+      };
+    }
+  }, [extractionStatus, contractId, router, token]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
       
-      // Allow fallback check via extension if MIME type is empty (sometimes happens on certain OS/browsers)
       const extension = selectedFile.name.split('.').pop()?.toLowerCase();
       
       if (!validTypes.includes(selectedFile.type) && !['pdf', 'docx'].includes(extension || '')) {
@@ -55,12 +98,52 @@ export default function UploadPage() {
       }
 
       const data = await response.json();
-      router.push(`/contracts/${data.contract_id}`);
+      setContractId(data.contract_id);
+      setExtractionStatus('processing');
     } catch (err: any) {
       setError(err.message || 'An error occurred during upload.');
       setIsUploading(false);
     }
   };
+
+  if (extractionStatus === 'processing') {
+    return (
+      <div className="max-w-2xl mx-auto space-y-8 flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="glass-surface p-16 rounded-3xl flex flex-col items-center justify-center text-center max-w-md w-full">
+          <div className="w-20 h-20 bg-accent-500/10 rounded-full flex items-center justify-center mb-6">
+             <Loader2 className="w-10 h-10 text-accent-500 animate-spin" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2">Processing Document</h2>
+          <p className="text-gray-500 dark:text-gray-400 font-medium animate-pulse">{loadingText}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (extractionStatus === 'failed') {
+    return (
+      <div className="max-w-2xl mx-auto space-y-8 flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="glass-surface p-12 rounded-3xl text-center max-w-lg w-full">
+          <h2 className="text-xl font-bold mb-4 text-red-500">Extraction Failed</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-8">{error}</p>
+          <div className="flex justify-center gap-4">
+            <Link href="/dashboard" className="px-6 py-2.5 text-gray-500 hover:text-gray-900 transition-colors font-medium">Dashboard</Link>
+            <button 
+              onClick={() => {
+                setExtractionStatus(null);
+                setFile(null);
+                setError('');
+                setIsUploading(false);
+              }} 
+              className="px-6 py-2.5 bg-accent-500 text-white rounded-xl hover:bg-accent-600 transition-colors font-medium shadow-sm"
+            >
+              Upload Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
@@ -116,7 +199,7 @@ export default function UploadPage() {
           onClick={handleUpload}
           disabled={!file || isUploading}
           className={`w-full mt-8 py-3.5 rounded-xl font-medium flex justify-center items-center gap-2 transition-all
-            ${!file 
+            ${!file || isUploading
               ? 'bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed' 
               : 'bg-accent-500 hover:bg-accent-600 text-white shadow-lg shadow-accent-500/25'
             }`}
@@ -124,7 +207,7 @@ export default function UploadPage() {
           {isUploading ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              Uploading & Processing...
+              Uploading...
             </>
           ) : (
             'Process Contract'

@@ -49,6 +49,11 @@ async def get_milestones(
     milestones = list(db.milestones.find({"contract_id": contract_id, "freelancer_id": freelancer_id}))
     for m in milestones:
         m["_id"] = str(m["_id"])
+        if m.get("status") in ("INVOICED", "OVERDUE", "PAID"):
+            invoice = db.invoices.find_one({"milestone_id": m["_id"]})
+            if invoice:
+                m["invoice_id"] = str(invoice["_id"])
+
         
     try:
         from lib.state_machine import run_pending_checks
@@ -71,9 +76,6 @@ async def trigger_milestone(id: str, freelancer_id: str = Depends(get_current_us
     milestone = db.milestones.find_one({"_id": query_id, "freelancer_id": freelancer_id})
     if not milestone:
         raise HTTPException(status_code=404, detail="Milestone not found")
-        
-    if milestone.get("trigger_type") == "recurring":
-        raise HTTPException(status_code=400, detail="Retainer milestones are system-managed and cannot be manually triggered")
         
     if milestone.get("status") != "PENDING":
         raise HTTPException(status_code=409, detail=f"Milestone is currently '{milestone.get('status')}', not PENDING")

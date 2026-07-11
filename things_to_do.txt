@@ -1,0 +1,7 @@
+1. invoice gen
+2. dates and calender
+3. context of completion to the groq chatbot
+4. email sending
+5. UI enhancements
+6. email verification for signing in
+7. oauth

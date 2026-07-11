@@ -17,6 +17,15 @@ except ImportError:
 
 router = APIRouter()
 
+@router.get("/by-milestone/{milestone_id}")
+async def get_invoice_by_milestone(milestone_id: str, freelancer_id: str = Depends(get_current_user_id)):
+    db = get_db()
+    invoice = db.invoices.find_one({"milestone_id": milestone_id})
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found for this milestone")
+    invoice["_id"] = str(invoice["_id"])
+    return invoice
+
 @router.get("/{id}")
 async def get_invoice(id: str, freelancer_id: str = Depends(get_current_user_id)):
     db = get_db()

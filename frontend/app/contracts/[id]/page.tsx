@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, use } from 'react';
-import { useRouter } from 'next/navigation';
 import { apiFetch } from '../../../lib/api';
 import MilestoneCard, { Milestone } from '../../../components/MilestoneCard';
 import ContractQA from '../../../components/ContractQA';
@@ -17,10 +16,16 @@ interface Contract {
   contract_date: string | null;
   extraction_status: string;
   extraction_error?: string | null;
+  title?: string | null;
+  client_contact?: {
+    name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+  } | null;
+  summary?: string | null;
 }
 
 export default function ContractPage({ params }: { params: Promise<{ id: string }> }) {
-  const router = useRouter();
   const { id } = use(params);
   const [contract, setContract] = useState<Contract | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
@@ -63,8 +68,14 @@ export default function ContractPage({ params }: { params: Promise<{ id: string 
   };
 
   const handleInvoice = async (milestoneId: string) => {
-    await apiFetch(`/api/milestones/${milestoneId}/invoice`, { method: 'POST' });
-    await fetchContractData();
+    try {
+      await apiFetch(`/api/milestones/${milestoneId}/invoice`, { method: 'POST' });
+    } catch (e) {
+      console.error('Invoice generation had an error (may still have been created):', e);
+    } finally {
+      // Always refresh — even on error the invoice may have been created (e.g. email failure)
+      await fetchContractData();
+    }
   };
 
   const handlePaid = async (milestoneId: string) => {
@@ -127,14 +138,21 @@ export default function ContractPage({ params }: { params: Promise<{ id: string 
 
       <div className="glass-surface p-8 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-          <h1 className="text-3xl font-bold mb-3">{contract.project_name || 'Untitled Project'}</h1>
+          <h1 className="text-3xl font-bold mb-3">{contract.title || contract.project_name || 'Untitled Project'}</h1>
           <div className="flex flex-wrap items-center gap-6 text-sm text-gray-600 dark:text-gray-400">
-            <span className="flex items-center gap-1.5 font-medium"><Building2 className="w-4 h-4" /> {contract.client_name || 'Unknown Client'}</span>
+            <span className="flex items-center gap-1.5 font-medium"><Building2 className="w-4 h-4" /> {contract.client_contact?.name || contract.client_name || 'Unknown Client'}</span>
+            {contract.client_contact?.email && <span className="flex items-center gap-1.5 font-medium">{contract.client_contact.email}</span>}
+            {contract.client_contact?.phone && <span className="flex items-center gap-1.5 font-medium">{contract.client_contact.phone}</span>}
             <span className="flex items-center gap-1.5"><FileText className="w-4 h-4" /> {contract.contract_type?.replace('_', ' ') || 'Unclassified'}</span>
             {contract.contract_date && (
               <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {contract.contract_date}</span>
             )}
           </div>
+          {contract.summary && (
+            <p className="mt-4 text-sm text-gray-600 dark:text-gray-400 max-w-3xl leading-relaxed">
+              {contract.summary}
+            </p>
+          )}
         </div>
         <div className="md:text-right bg-black/5 dark:bg-white/5 p-4 rounded-2xl w-full md:w-auto flex flex-col md:items-end gap-3">
           <div className="text-left md:text-right w-full">
@@ -143,13 +161,22 @@ export default function ContractPage({ params }: { params: Promise<{ id: string 
               {contract.project_value ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(contract.project_value) : 'TBD'}
             </p>
           </div>
-          <button 
-            onClick={() => setIsQAOpen(true)}
-            className="flex justify-center items-center gap-2 bg-accent-500/10 hover:bg-accent-500/20 text-accent-600 dark:text-accent-400 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors w-full md:w-auto mt-2 md:mt-0"
-          >
-            <MessageSquare className="w-4 h-4" />
-            Ask Contract AI
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full mt-2 md:mt-0">
+            <Link 
+              href={`/contracts/${id}/pdf`}
+              className="flex justify-center items-center gap-2 bg-gray-500/10 hover:bg-gray-500/20 text-gray-700 dark:text-gray-300 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors w-full"
+            >
+              <FileText className="w-4 h-4" />
+              View Contract
+            </Link>
+            <button 
+              onClick={() => setIsQAOpen(true)}
+              className="flex justify-center items-center gap-2 bg-accent-500/10 hover:bg-accent-500/20 text-accent-600 dark:text-accent-400 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors w-full"
+            >
+              <MessageSquare className="w-4 h-4" />
+              Ask Contract AI
+            </button>
+          </div>
         </div>
       </div>
 

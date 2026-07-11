@@ -26,21 +26,13 @@ Contract Upload (PDF / DOCX)
               │ raw text + section structure
               ▼
 ┌───────────────────────────────┐
-│  Component 2: Classifier      │
-│  keyword signals first        │
-│  Groq fallback for ambiguous  │
-│  → fixed-price / retainer /   │
-│     phase-based / advance     │
-└─────────────┬─────────────────┘
-              │ contract type
-              ▼
-┌───────────────────────────────┐
-│  Component 3: Extractor       │
-│  Pass 1: regex anchors        │
-│  Pass 2: Groq LLM (JSON)      │
-│  → percentage resolution      │
-│  → trigger classification     │
-│  → confidence scoring         │
+│  Component 2: Extractor       │
+│  Single Groq LLM pass over    │
+│  full contract text (JSON)    │
+│  → contract_type              │
+│  → metadata + summary         │
+│  → milestones list            │
+│  → self-reported confidence   │
 └─────────────┬─────────────────┘
               │ structured milestone records
               ▼
@@ -134,59 +126,48 @@ contract_chunks
 - Section splitter: detect boundaries by matching headings — "Payment", "Milestone", "Schedule", "Deliverable", "Terms", "Scope"
 - Output: raw text + section structure dict passed to classifier and extractor; full text passed to RAG indexer
 
-### Component 2 — Classifier (lib/classifier.py)
+### Component 2 — Extractor (lib/extractor.py)
 
-Keyword signals (fast path, no LLM):
-- "monthly retainer" | "per month" → `retainer`
-- "Phase 1" / "Phase 2" / "Discovery" / "Development" as payment-tied headers → `phase_based`
-- "advance" | "upfront" + amount/percentage in first milestone → `advance`
-- Single project value + percentage splits → `fixed_price`
-
-Groq fallback (ambiguous cases only):
-- Send payment terms section text + classification prompt
-- Returns one of: `fixed_price`, `retainer`, `phase_based`, `advance`, `unsupported`
-- `unsupported` → surface message to user, allow manual milestone creation
-
-Store contract type on the contracts document. Used by extractor and invoice compliance layer.
-
-### Component 3 — Extractor (lib/extractor.py)
-
-**Pass 1 — Regex anchors:**
-- Match: percentage values (`30%`), currency amounts (`₹50,000`, `Rs. 1,50,000`), day references (`within 15 days`), signing language (`upon execution`, `on signing`)
-- Extract ±150 chars around each anchor as trigger context
-- Runs < 100ms, handles well-structured contracts without LLM
-
-**Pass 2 — Groq structured extraction:**
-- Each anchor + context sent to Groq with type-aware prompt
+**Groq structured extraction:**
+- The full contract text is sent to Groq in a single call.
 - `response_format: {"type": "json_object"}` enforced
 - Returns null for any field not explicitly in contract text — never infer
-- Output schema per milestone:
+- Output schema:
   ```json
   {
-    "milestone_number": int,
-    "trigger_type": "date_based" | "event_based" | "signing_based",
-    "trigger_condition": string or null,
-    "trigger_date": "YYYY-MM-DD" or null,
-    "percentage": float or null,
-    "amount_inr": float or null,
-    "deliverable_description": string or null
+    "contract_type": "fixed_price" | "retainer" | "phase_based" | "advance" | "unsupported",
+    "title": "string",
+    "client_contact": { "name": "string", "email": "string", "phone": "string" },
+    "summary": "string",
+    "project_value": "float",
+    "project_value_confidence": "float",
+    "milestones": [
+      {
+        "milestone_number": "int",
+        "trigger_type": "date_based" | "event_based" | "signing_based" | "recurring",
+        "trigger_condition": "string",
+        "trigger_date": "YYYY-MM-DD",
+        "percentage": "float",
+        "amount_inr": "float",
+        "deliverable_description": "string",
+        "extraction_confidence": "float"
+      }
+    ]
   }
   ```
 
 **Percentage resolution:**
 - `amount_inr = project_value × (percentage / 100)`
-- Project total confidence must exceed 0.80 threshold before auto-resolution
+- Project total confidence must exceed threshold before auto-resolution
 - Below threshold: prompt user to enter project total manually
 
-**Confidence scoring (0.0–1.0):**
-- Regex anchor match quality: 0.0–0.3
-- LLM field completeness: 0.0–0.5
-- Format validation: 0.0–0.2
-- Below 0.65: flag milestone for user review before saving
+**Confidence scoring:**
+- Self-reported by Groq (`extraction_confidence`).
+- Below threshold: flag milestone for user review before saving
 
 **Retainer special case:**
 - Create single milestone template: `trigger_type: "recurring"`, `cadence: "monthly"`, billing date from contract
-- State machine creates new INVOICED instances from template on each billing date
+- State machine creates new PENDING instances from template on each PAID transition
 
 ### Component 4 — State Machine (lib/state_machine.py)
 
@@ -200,16 +181,15 @@ All transitions:
 - Write to `milestone_events`: timestamp, actor (system | user), previous state
 
 State definitions:
-- **PENDING**: default post-extraction. Event-based: waits for user to mark trigger met. Date-based: checked opportunistically when user visits dashboard.
-- **TRIGGERED**: condition met. Dashboard + email notification. User confirms with one click. Retainer: set automatically on dashboard visit.
+- **PENDING**: default post-extraction. All milestones wait for the user to manually mark them as TRIGGERED.
+- **TRIGGERED**: condition met. User confirms with one click. 
 - **INVOICED**: PDF generated, stored, sent to client. Invoice number, sent_at, due_date recorded. Follow-up clock starts.
-- **PAID**: user marks paid. `paid_date` and `payment_lag_days` recorded. Check if next milestone in sequence auto-triggers.
+- **PAID**: user marks paid. `paid_date` and `payment_lag_days` recorded. If `trigger_type` is `recurring`, next cycle's `PENDING` milestone is created.
 - **OVERDUE**: due date passed without PAID. Follow-up escalates. Highlighted in dashboard.
 
 **Lazy / On-Demand checks:**
 - `run_pending_checks(freelancer_id: str)` in lib/state_machine.py
 - Triggered opportunistically as a FastAPI BackgroundTask whenever the user hits GET /api/contracts or GET /api/milestones/{contract_id}.
-- Queries PENDING date-based milestones where `trigger_date <= today`, transitions to TRIGGERED, creates notification.
 - Queries INVOICED + OVERDUE milestones, checks against follow-up schedule, sends due emails via smtplib.
 - Scoped strictly to freelancer_id to ensure checks remain fast and cheap.
 
@@ -369,6 +349,7 @@ FOLLOWUP_SCHEDULE_DAYS = [-3, 0, 7, 14, 30]
 8. [x] Section splitter: heading detection, section boundary output
 9. [x] lib/classifier.py: keyword fast path + Groq fallback
 10. [x] Contract upload endpoint: async background task trigger, extraction_status tracking
+10b. [x] Contract raw file storage in GridFS and GET /pdf retrieval endpoint
 
 ### Phase 3 — Milestone extraction
 11. [x] lib/extractor.py: regex anchor pass
@@ -410,10 +391,14 @@ FOLLOWUP_SCHEDULE_DAYS = [-3, 0, 7, 14, 30]
 35. [x] Auth pages (register/login)
 36. [x] Dashboard: contract list, milestone status view
 37. [x] Contract upload flow + processing indicator
+37b. [x] Contract PDF viewer page integration
 38. [x] Milestone detail + trigger/paid actions
-39. [x] Invoice preview + PDF download
+39. [x] Invoice preview + PDF download (Fixed missing preview component)
 40. [x] Contract QA chat interface
 41. [x] Settings page
+41b. [x] Bug: Invoice navigation from MilestoneCard — 4 root causes fixed: (1) invoice lookup used freelancer_id filter causing silent mismatch → now uses milestone_id only; (2) send_invoice_email not wrapped in try/except → email failure crashed create_invoice endpoint; (3) handleInvoice not using try/finally → fetchContractData skipped on any error; (4) Added GET /api/invoices/by-milestone/{milestone_id} endpoint + MilestoneCard self-fetch fallback for resilience
+41c. [x] Bug: Dashboard card showing 'Untitled Project' — title field missing from Contract interface; card now uses title || project_name || fallback (and client_contact.name || client_name for client)
+41d. [x] Bug: Delete contract endpoint always returning 500 — referenced `contract` variable before it was fetched; fixed by reading contract doc before deleting it so file_url is available for GridFS cleanup
 
 ### Phase 8 — Evaluation + hardening
 42. Test set: 20 freelance contracts across four types

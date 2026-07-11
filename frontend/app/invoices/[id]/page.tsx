@@ -5,6 +5,7 @@ import { apiFetch } from '../../../lib/api';
 import { useAuth } from '../../../context/AuthContext';
 import { ArrowLeft, Download, FileText, Loader2, Calendar, IndianRupee } from 'lucide-react';
 import Link from 'next/link';
+import InvoicePreview from '../../../components/InvoicePreview';
 
 interface Invoice {
   _id: string;
@@ -105,9 +106,9 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
-      <Link href={`/milestones/${invoice.milestone_id}`} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-medium">
+      <Link href={`/contracts/${invoice.contract_id}`} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-medium">
         <ArrowLeft className="w-4 h-4 mr-1.5" />
-        Back to Milestone
+        Back to Contract
       </Link>
       
       <div className="glass-surface p-12 rounded-3xl flex flex-col items-center justify-center text-center">
@@ -136,6 +137,10 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
             <p className="text-xs uppercase font-semibold mb-1">Total Amount</p>
             <p className="font-bold text-lg">{formatINR(invoice.total_amount)}</p>
           </div>
+        </div>
+        
+        <div className="w-full max-w-4xl mb-10">
+          <InvoicePreview invoiceId={id as string} token={token} />
         </div>
         
         <button

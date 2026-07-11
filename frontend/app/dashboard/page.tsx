@@ -9,8 +9,10 @@ import { useAuth } from '../../context/AuthContext';
 
 interface Contract {
   _id: string;
+  title?: string | null;
   project_name: string | null;
   client_name: string | null;
+  client_contact?: { name?: string | null } | null;
   contract_type: string | null;
   extraction_status: string;
   created_at: string;
@@ -127,10 +129,10 @@ export default function Dashboard() {
             <div className="flex-1 mb-4 flex justify-between items-start">
               <div className="flex-1">
                 <h3 className="text-lg font-semibold group-hover:text-accent-500 transition-colors line-clamp-1">
-                  {contract.project_name || 'Untitled Project'}
+                  {contract.title || contract.project_name || 'Untitled Project'}
                 </h3>
                 <p className="text-sm text-gray-500 mt-1 line-clamp-1">
-                  {contract.client_name || 'Unknown Client'}
+                  {contract.client_contact?.name || contract.client_name || 'Unknown Client'}
                 </p>
               </div>
               <button 

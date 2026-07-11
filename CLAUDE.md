@@ -14,9 +14,9 @@ Start every session by reading PLAN.md, then this file.
       routers/invoices.py       — invoice fetch, PDF download, followup pause/resume
       routers/contract_qa.py    — RAG question-answering endpoint
       lib/ingestion.py          — routes PDF/DOCX to pdfplumber/OCR.space/python-docx
-      lib/classifier.py         — contract type classification (keyword + Groq fallback)
-      lib/extractor.py          — two-pass milestone extraction (regex + Groq)
-      lib/state_machine.py      — milestone status transitions, audit log, and lazy pending checks
+      lib/classifier.py         — contract type classification (Groq fallback)
+      lib/extractor.py          — single-pass LLM extraction over full text
+      lib/state_machine.py      — milestone status transitions, audit log, and lazy follow-up checks
       lib/invoice_gen.py        — ReportLab PDF generation + GST computation
       lib/rag.py                — chunking, embedding, retrieval, NLI faithfulness check
       lib/llm_client.py         — single Groq client wrapper, all LLM calls go through here
@@ -67,8 +67,8 @@ Start every session by reading PLAN.md, then this file.
     - Don't block the upload request on the extraction pipeline — it must run as an async background task
 
 ## Current focus
-Last updated: 2026-07-10
-Active work: Phase 7 — Frontend
+Last updated: 2026-07-11
+Active work: Phase 7 — Frontend polish
 Recent completions:
 - FastAPI project scaffold (main.py, config.py, requirements.txt, .env.example) — completed
 - Pydantic models for all 6 collections created — completed
@@ -83,8 +83,7 @@ Recent completions:
 - lib/llm_client.py: single Groq API wrapper (call_groq) — completed
 - lib/classifier.py: Groq fallback logic (classify_contract) — completed
 - Contract upload endpoint (POST /api/contracts/upload) + background ingestion — completed
-- lib/extractor.py: regex anchor pass (find_anchors) — completed
-- lib/extractor.py: Groq structured extraction pass (extract_milestone_from_anchor) — completed
+- lib/extractor.py: single Groq structured extraction pass over full text (extract_contract) — completed
 - lib/extractor.py: Percentage resolution logic (resolve_amounts) — completed
 - lib/extractor.py: Confidence scoring (score_confidence, is_review_required) — completed
 - lib/extractor.py: Retainer template creation (build_retainer_template) — completed
@@ -126,5 +125,13 @@ Recent completions:
 - Frontend Landing page: Public hero layout, dashboard routing guards updated — completed
 - Bank details removed globally per requirement changes — completed
 - Bug: Fixed scanned PDF extraction silent failure (backend exception tracking + frontend polling) — completed
+- Bug: Built missing InvoicePreview component, configured pdfjs worker, and fixed frontend api fetch typing — completed
+- Refactor: Replaced two-pass regex extraction with single Groq call for full contract reasoning — completed
+- Refactor: Made all PENDING -> TRIGGERED state transitions fully manual — completed
+- Refactor: Upload page polling and loading screen state implemented — completed
+- Feature: Added native PDF contract viewer and GridFS upload/download endpoints for raw contracts — completed
+- Bug: Fixed invoice navigation from MilestoneCard — root causes: (1) invoice lookup in contracts.py/milestones.py filtered by freelancer_id causing silent mismatch, removed to use milestone_id only; (2) send_invoice_email in create_invoice was not wrapped in try/except — email failure propagated and caused 500 before frontend could read success; (3) handleInvoice in contract page didn't use try/finally so fetchContractData was skipped on any error; (4) Added MilestoneCard self-fetch fallback via new GET /api/invoices/by-milestone/{milestone_id} endpoint when invoice_id is missing from milestone list — all fixed — completed
+- Bug: Fixed dashboard showing 'Untitled Project' — added title field to Contract interface and updated card to use title || project_name || fallback, matching the contract detail page — completed
+- Bug: Fixed delete contract always showing error — contract was deleted BEFORE being read, so the file_url reference caused a NameError (500) even though deletion succeeded; fixed by fetching contract doc first, then deleting — completed
 Open questions / blockers:
 - None

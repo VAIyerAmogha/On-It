@@ -9,12 +9,10 @@ try:
     from lib.auth_dep import get_current_user_id
     from lib.ingestion import ingest_file
     from lib.classifier import classify_contract
-    from lib.extractor import extract_milestones, save_milestones, is_review_required
 except ImportError:
     from backend.lib.auth_dep import get_current_user_id
     from backend.lib.ingestion import ingest_file
     from backend.lib.classifier import classify_contract
-    from backend.lib.extractor import extract_milestones, save_milestones, is_review_required
 
 router = APIRouter()
 
@@ -24,43 +22,41 @@ def process_ingestion(contract_id: str, temp_path: str, filename: str):
         # 1. Ingest file
         full_text, sections = ingest_file(temp_path, filename)
         
-        # 2. Classify contract
-        classification = classify_contract(full_text)
-        contract_type = classification.get("contract_type", "unsupported")
-        
         try:
-            from lib.extractor import extract_contract_metadata
+            from lib.extractor import extract_contract, resolve_amounts, save_milestones, is_review_required
         except ImportError:
-            from backend.lib.extractor import extract_contract_metadata
+            from backend.lib.extractor import extract_contract, resolve_amounts, save_milestones, is_review_required
             
-        metadata = extract_contract_metadata(full_text)
+        # 2. Extract everything in one Groq call
+        extracted_data = extract_contract(full_text)
+        
+        contract_type = extracted_data.get("contract_type", "unsupported")
+        project_value = extracted_data.get("project_value")
+        project_value_confidence = extracted_data.get("project_value_confidence", 0.0)
         
         # 3. Update contract doc
         db.contracts.update_one(
             {"_id": ObjectId(contract_id)},
             {"$set": {
                 "contract_type": contract_type,
-                "project_name": metadata.get("project_name"),
-                "client_name": metadata.get("client_name"),
-                "project_value": metadata.get("project_value"),
-                "project_value_confidence": metadata.get("project_value_confidence", 0.0),
-                "currency": metadata.get("currency"),
-                "contract_date": metadata.get("contract_date")
+                "title": extracted_data.get("title"),
+                "client_contact": extracted_data.get("client_contact"),
+                "summary": extracted_data.get("summary"),
+                "project_value": project_value,
+                "project_value_confidence": project_value_confidence
             }}
         )
         
         # 4. Extract and save milestones
-        contract = db.contracts.find_one({"_id": ObjectId(contract_id)})
-        milestones = extract_milestones(
-            contract_id=contract_id,
-            freelancer_id=contract["freelancer_id"],
-            full_text=full_text,
-            contract_type=contract_type,
-            project_value=contract.get("project_value"),
-            project_value_confidence=contract.get("project_value_confidence", 0.0),
-            contract_date=contract.get("contract_date")
-        )
+        milestones = extracted_data.get("milestones", [])
+        milestones, _ = resolve_amounts(milestones, project_value, project_value_confidence)
         
+        contract = db.contracts.find_one({"_id": ObjectId(contract_id)})
+        for ms in milestones:
+            ms["contract_id"] = contract_id
+            ms["freelancer_id"] = contract["freelancer_id"]
+            ms["modified_from_contract"] = False
+            
         if milestones:
             save_milestones(db, milestones)
             
@@ -116,6 +112,16 @@ async def upload_contract(
         raise HTTPException(status_code=500, detail=f"Failed to save uploaded file: {str(e)}")
         
     db = get_db()
+    try:
+        try:
+            from lib.storage import save_pdf
+        except ImportError:
+            from backend.lib.storage import save_pdf
+        file_url = save_pdf(db, temp_path, file.filename, metadata={"freelancer_id": freelancer_id}, bucket_name="contracts")
+    except Exception as e:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        raise HTTPException(status_code=500, detail=f"Failed to store file in GridFS: {str(e)}")
     new_contract = {
         "freelancer_id": freelancer_id,
         "extraction_status": "processing",
@@ -129,7 +135,7 @@ async def upload_contract(
         "contract_date": None,
         "contract_type": None,
         "payment_terms_days": None,
-        "file_url": None,
+        "file_url": file_url,
         "indexed_for_rag": False
     }
     
@@ -174,16 +180,59 @@ async def get_contract(id: str, freelancer_id: str = Depends(get_current_user_id
     milestones = list(db.milestones.find({"contract_id": id, "freelancer_id": freelancer_id}))
     for m in milestones:
         m["_id"] = str(m["_id"])
+        if m.get("status") in ("INVOICED", "OVERDUE", "PAID"):
+            invoice = db.invoices.find_one({"milestone_id": m["_id"]})
+            if invoice:
+                m["invoice_id"] = str(invoice["_id"])
         
     return {"contract": contract, "milestones": milestones}
 
 @router.delete("/{id}")
 async def delete_contract(id: str, freelancer_id: str = Depends(get_current_user_id)):
     db = get_db()
-    result = db.contracts.delete_one({"_id": ObjectId(id), "freelancer_id": freelancer_id})
-    if result.deleted_count == 0:
+    
+    # Fetch contract BEFORE deleting so we can clean up GridFS
+    contract = db.contracts.find_one({"_id": ObjectId(id), "freelancer_id": freelancer_id})
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    
+    db.contracts.delete_one({"_id": ObjectId(id), "freelancer_id": freelancer_id})
+    
+    # Delete associated milestones and invoices
+    db.milestones.delete_many({"contract_id": id, "freelancer_id": freelancer_id})
+    
+    # Delete raw contract PDF from GridFS
+    if contract.get("file_url"):
+        try:
+            try:
+                from lib.storage import delete_pdf
+            except ImportError:
+                from backend.lib.storage import delete_pdf
+            delete_pdf(db, contract["file_url"], bucket_name="contracts")
+        except Exception:
+            pass
+            
+    return {"message": "Contract deleted successfully"}
+
+from fastapi.responses import Response
+
+@router.get("/{id}/pdf")
+async def get_contract_pdf(id: str, freelancer_id: str = Depends(get_current_user_id)):
+    db = get_db()
+    contract = db.contracts.find_one({"_id": ObjectId(id), "freelancer_id": freelancer_id})
+    if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
         
-    # Also delete associated milestones
-    db.milestones.delete_many({"contract_id": id, "freelancer_id": freelancer_id})
-    return {"message": "Contract deleted successfully"}
+    file_id = contract.get("file_url")
+    if not file_id:
+        raise HTTPException(status_code=404, detail="Contract file not available")
+        
+    try:
+        try:
+            from lib.storage import retrieve_pdf
+        except ImportError:
+            from backend.lib.storage import retrieve_pdf
+        pdf_bytes = retrieve_pdf(db, file_id, bucket_name="contracts")
+        return Response(content=pdf_bytes, media_type="application/pdf")
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"File not found: {str(e)}")

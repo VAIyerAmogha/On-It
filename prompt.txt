@@ -1,160 +1,54 @@
 Refer CLAUDE.md and Plan.md. 
 
-1. Bug: nothing renders after uploading a scanned/image PDF
-
-Symptom: uploading a scanned (non-native-text) PDF shows no visible
-result in the UI — no error, no content, just nothing.
-
-Do not guess-fix this. Root-cause it first, then fix. Likely places
-the failure could actually be, in order of likelihood — check each rather
-than assuming:
+The invoice page and PDF export still aren't showing up. Don't ask me for
+milestone IDs, invoice IDs, or auth tokens — you have full access to the
+codebase and the terminal, so get everything you need yourself:
 
 
-Backend: does is_native_pdf() correctly return False for this file,
-and does extract_scanned_pdf() actually get called? Add a temporary
-log line if needed to confirm which path fires. A scanned PDF wrongly
-classified as native would call extract_native_pdf(), get empty text,
-and raise IngestionError — check for that first.
-Backend: is the OCR.space call actually succeeding? Check for
-IsErroredOnProcessing: true in the raw response, expired/invalid
-OCR_SPACE_API_KEY, a request timeout (OCR_TIMEOUT_SECONDS), or a
-file-size/free-tier limit rejection from OCR.space. Log the raw
-response body on failure instead of only raising a generic
-IngestionError — the real reason needs to be visible somewhere
-(server logs at minimum).
-Backend: when ingestion raises, does process_ingestion() actually
-catch it and set extraction_status: "failed" with an error message
-field on the contract doc, or does the exception just die inside the
-BackgroundTask silently (a known FastAPI BackgroundTask gotcha —
-exceptions inside them don't surface anywhere unless you explicitly
-catch and persist them)? If there's no extraction_error field being
-set, add one now: {"extraction_status": "failed", "extraction_error": str(exc)}.
-Frontend: does the upload-polling code handle extraction_status: "failed" at all? If the polling loop only checks for
-!== "processing" and then unconditionally navigates to the contract
-page assuming success, a "failed" status would either navigate to a
-contract with no milestones and nothing rendered, or hang forever if
-the loop only exits on "extracted" specifically. Fix the polling
-logic to explicitly branch on "failed" and render the actual
-extraction_error message inline, with a retry/re-upload option — per
-the original Phase 7 spec, this should already have been an inline
-error state, not a silent dead end.
+Register your own throwaway test user (or reuse one already in the DB),
+upload the sample fixture already in backend/tests/fixtures/, generate
+a milestone/invoice through the actual API, and use the IDs/token that
+produces. Or just read the source files directly — you don't need to
+run anything to catch a field-name mismatch or a missing/misnamed file.
 
 
-Fix whichever of these is the actual root cause (likely more than one —
-a silent backend failure AND a frontend that doesn't handle the failed
-state are both real bugs even if only one is the "primary" cause). Test
-with a real scanned PDF afterward and confirm you get either (a) correctly
-extracted content, or (b) a visible, specific error message — never a
-blank screen.
+Do this, in order
 
 
-2. Missing: invoice generation page + PDF export/download
+Read the actual files, don't assume. Open every file in this chain
+and check them against each other:
 
-Symptom: after generating an invoice, there's no page showing it, and
-no way to export/download the PDF.
-
-Fix/build:
-
-
-Confirm pages/invoices/[id].tsx exists and is actually reachable —
-if the milestone-detail invoice form isn't navigating to
-/invoices/{id} after a successful POST /api/milestones/{id}/invoice,
-fix that redirect first (check the response actually contains the new
-invoice's _id and that the frontend uses it, rather than the
-milestone's id, to build the URL).
-On that page, alongside the existing PDF preview, add a clear
-"Download PDF" button/icon (Lucide Download) that:
-
-Fetches GET /api/invoices/{id}/pdf as a blob (not a bare <a href>
-to the API route directly, since that route requires the
-Authorization header — a plain link won't carry it)
-Creates an object URL from the blob and triggers a download via a
-temporary <a> element with download="{invoice_number}.pdf",
-then revokes the object URL after
-Shows a brief loading state on the button while the fetch is in
-flight (glass/calm style per the design system — a subtle spinner or
-disabled state, not a jarring change)
+The backend invoice-creation endpoint (routers/milestones.py) —
+what shape does it actually return? Is _id serialized as a plain
+string, or is it leaking a raw ObjectId?
+Whatever frontend code handles the response after generating an
+invoice — does it read .id, ._id, or .invoice_id? Does that
+match what the backend actually sends? This exact mismatch is the
+single most likely bug — check it first.
+Does pages/invoices/[id].tsx exist, at exactly that path? Next.js
+Pages Router is filename-sensitive; a misnamed file 404s silently.
+Does a "Generate Invoice" button/handler actually exist in the code
+and actually call the endpoint and actually navigate afterward — or
+is one of those three missing/dead code?
+Does components/InvoicePreview.tsx exist and get imported into the
+invoices page, with the pdfjs worker actually configured?
+Does a Download button exist anywhere in the frontend code at all —
+search for it. If it was never added, that's simply missing — build
+it, don't assume it's "broken."
 
 
 
-Confirm this works with a real invoice end-to-end: click Download,
-confirm a real PDF lands in the downloads folder and opens correctly.
+Fix whatever you find, using your own runtime test (register →
+upload → generate invoice → visit the page → download) to confirm the
+fix actually works, end to end, before considering it done.
+Download button spec (build this if it doesn't exist): a visible
+"Download PDF" button that fetches GET /api/invoices/{id}/pdf with
+the Authorization header attached, reads it as a blob, and triggers a
+real file download via an object URL — a bare <a href> won't carry
+auth and will fail.
 
 
-
-3. Remove: bank details
-
-Bank details (bank_name, account_number, ifsc, upi_id) are not
-being used and should be removed — not hidden, actually removed — from:
-
-
-Settings page (pages/settings.tsx) — delete the "Bank Details"
-section and its four input fields entirely.
-Profile schema (models/profiles.py or wherever it's currently
-defined) — remove the four fields from the Pydantic model. If you'd
-rather not do a destructive Mongo migration on existing documents,
-leaving stale data in already-existing profile documents is fine — just
-stop reading/writing/validating these fields anywhere going forward.
-PUT /api/settings handler — stop accepting/persisting these
-fields even if a client sends them.
-build_invoice_data() in lib/invoice_gen.py — remove the
-bank_details dict entirely from the assembled invoice data.
-generate_invoice_pdf() — remove the bank details block from the
-PDF layout. Re-balance the page layout so there isn't an empty gap
-where that block used to sit (e.g. let the footer note move up, or
-give the line-items table a bit more breathing room).
-Search the whole codebase (backend and frontend) for
-bank_name|account_number|ifsc|upi_id and confirm nothing references
-them afterward — including the invoices collection's stored
-documents going forward (stop writing a bank_details field on new
-invoices).
-
-
-
-4. New: public landing page
-
-Add a real landing page at /, separate from the authenticated dashboard.
-Move the current dashboard (contract list) to /dashboard, and update:
-
-
-Login/register success redirects to go to /dashboard, not /
-The route-guard logic so / is public (no auth required) and
-/dashboard (and everything else currently protected) still requires a
-token
-The Sidebar's logo/home link, if any, to point at /dashboard for
-logged-in users
-
-
-Landing page content and design (same design system as the rest of the
-app — glassmorphism, monochrome + accent, Inter, Lucide, calm motion, no
-mixing flat and glass components):
-
-
-Hero section: product name, a one-line positioning statement (e.g. "The
-contract-to-invoice system built for Indian freelancers"), and two CTAs
-— "Get Started" (→ /auth/register) as a solid accent-filled primary
-button, "Log In" (→ /auth/login) as a secondary/ghost glass button.
-Hero content sits over the same soft neutral/gradient background as the
-rest of the app, with a floating glass card or subtle product
-screenshot/mockup as a visual anchor — avoid a plain text-only hero.
-A short "how it works" section: 3-4 steps (Upload your contract → We
-extract your milestones → Get invoiced automatically → Get paid on
-time), each as a glass card in a row/grid, Lucide icon per step.
-A brief feature highlights section: 3-4 cards covering the core
-capabilities (automatic milestone extraction, GST-compliant invoicing,
-contract Q&A chat, zero setup cost) — reuse the same glass card language
-as the rest of the app, don't introduce a new visual style just for
-marketing content.
-Footer: minimal, just a copyright line and maybe a link back to login.
-Respect the theme toggle here too — landing page should support both
-light and dark mode consistently with the rest of the app, not be
-locked to one theme.
-No fake testimonials, no fake logos/press mentions, no fabricated
-numbers/stats — keep every claim on this page literally true given
-what's actually built so far.
-
-
-Keep this page reasonably lean — it's a freelancer tool's landing page,
-not a large marketing site. One scroll-length page is enough for now.
+Report back concretely what was actually broken and what you changed —
+not just "fixed it."
 
 log updates CLAUDE.md and Plan.md with the exisiting format
