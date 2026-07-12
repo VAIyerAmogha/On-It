@@ -83,6 +83,20 @@ export default function ContractPage({ params }: { params: Promise<{ id: string 
     await fetchContractData();
   };
 
+  const handleMissedDeadline = async (milestoneId: string, discountPercentage: number) => {
+    try {
+      await apiFetch(`/api/milestones/${milestoneId}/invoice-missed-deadline`, {
+        method: 'POST',
+        body: JSON.stringify({ discount_percentage: discountPercentage })
+      });
+    } catch (e) {
+      console.error('Missed deadline invoice generation had an error:', e);
+      throw e;
+    } finally {
+      await fetchContractData();
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="animate-pulse space-y-8 max-w-5xl mx-auto">
@@ -196,6 +210,7 @@ export default function ContractPage({ params }: { params: Promise<{ id: string 
                 milestone={milestone}
                 onTrigger={handleTrigger}
                 onInvoice={handleInvoice}
+                onMissedDeadline={handleMissedDeadline}
                 onPaid={handlePaid}
               />
             ))}

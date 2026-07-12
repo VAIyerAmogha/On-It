@@ -13,12 +13,14 @@ Start every session by reading PLAN.md, then this file.
       routers/milestones.py     — trigger/paid state transitions, invoice trigger
       routers/invoices.py       — invoice fetch, PDF download, followup pause/resume
       routers/contract_qa.py    — RAG question-answering endpoint
+      routers/notifications.py  — fetch sorted notifications list for freelancer
       lib/ingestion.py          — routes PDF/DOCX to pdfplumber/OCR.space/python-docx
       lib/classifier.py         — contract type classification (Groq fallback)
       lib/extractor.py          — single-pass LLM extraction over full text
       lib/state_machine.py      — milestone status transitions, audit log, and lazy follow-up checks
       lib/invoice_gen.py        — ReportLab PDF generation + GST computation
       lib/rag.py                — chunking, embedding, retrieval, NLI faithfulness check
+      lib/notifications.py      — notifications engine (Pure Mongo queries + reshape)
       lib/llm_client.py         — single Groq client wrapper, all LLM calls go through here
       models/                   — MongoDB document schemas (Pydantic)
     frontend/
@@ -140,5 +142,11 @@ Recent completions:
 - Feature: Added Invoice Email Preview modal to frontend for manual sending with editable subject and body — completed
 - Feature: Refactored email dispatch into a shared `email_utils.py` and implemented manual email verification for local signups (`/api/auth/register` sends token, no JWT), added `/verify-email` and `/resend-verification` endpoints, and enforced verification check on login.
 - Feature: Added frontend verification flows: updated Register and Login pages with glass-surface calm states for "check inbox" and "please verify email", added `/verify-email` page for token checking, and hooked up `resendVerificationEmail` api fetch helper.
+- Feature: Implemented backend notifications system (`lib/notifications.py` and `GET /api/notifications` endpoint) running four targeted Mongo queries for overdue payments, payments due soon, upcoming deadlines, and uninvoiced milestones, sorted by urgency.
+- Feature: Added glass-surface notifications panel above the contract grid on the frontend Dashboard to display sorted alerts (overdue, due soon, deadlines, uninvoiced) with slide/fade animation, mobile responsive stacking, and inline "Mark Paid" and "Generate Invoice" async actions with per-row loading and inline error states.
+- Feature: Added goodwill discount and delay acknowledgment support for missed deadline invoices, including ReportLab discount line rendering, dynamic delayed Groq cover note generation, and new validated POST /api/milestones/{id}/invoice-missed-deadline endpoint.
+- Feature: Implemented the frontend "Missed Deadline" invoice generation flow on MilestoneCard (split buttons in TRIGGERED state, glass-surface dialog modal, integer discount input validation, live client-side preview calculation) and updated the Invoice detail page (muted "Goodwill Discount Applied" badge and original total amount struck-through) — completed
+- Feature: Added three new delivery-level notification types (MISSED_DELIVERY, DELIVERY_REMINDER, UNINVOICED_TRIGGERED) to backend `lib/notifications.py` with updated urgency sorting order. — completed
+- Feature: Updated Dashboard notification panel frontend to render the three new delivery-level notification types with dedicated UI states and inline "Mark as Triggered" action for missed deadlines. — completed
 Open questions / blockers:
 - None

@@ -18,6 +18,11 @@ interface Invoice {
   milestone_id: string;
   contract_id: string;
   sent_at?: string;
+  delivery_missed?: boolean;
+  discount_percentage?: number;
+  discount_amount?: number;
+  original_amount_inr?: number;
+  gst_rate?: number;
 }
 
 export default function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
@@ -179,10 +184,24 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
             <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Due Date</p>
             <p className="font-medium">{invoice.due_date}</p>
           </div>
-          <div className="bg-emerald-500/10 p-4 rounded-2xl text-emerald-700 dark:text-emerald-400">
+          <div className="bg-emerald-500/10 p-4 rounded-2xl text-emerald-700 dark:text-emerald-400 flex flex-col justify-center items-center">
             <IndianRupee className="w-5 h-5 mb-2 mx-auto" />
-            <p className="text-xs uppercase font-semibold mb-1">Total Amount</p>
-            <p className="font-bold text-lg">{formatINR(invoice.total_amount)}</p>
+            <p className="text-xs text-center uppercase font-semibold mb-1">Total Amount</p>
+            <div className="flex flex-col items-center">
+              <div className="flex items-baseline gap-2 justify-center">
+                {invoice.delivery_missed && invoice.original_amount_inr !== undefined && (
+                  <span className="text-sm line-through opacity-60 font-medium">
+                    {formatINR(invoice.original_amount_inr * (1 + (invoice.gst_rate ?? 0.18)))}
+                  </span>
+                )}
+                <span className="font-bold text-lg">{formatINR(invoice.total_amount)}</span>
+              </div>
+              {invoice.delivery_missed && (
+                <span className="text-[10px] mt-1 px-2 py-0.5 bg-accent-500/10 text-accent-600 dark:text-accent-400 rounded-full font-semibold">
+                  Goodwill Discount Applied ({invoice.discount_percentage}%)
+                </span>
+              )}
+            </div>
           </div>
         </div>
         

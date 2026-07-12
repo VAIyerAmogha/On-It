@@ -406,6 +406,12 @@ FOLLOWUP_SCHEDULE_DAYS = [-3, 0, 7, 14, 30]
 41h. [x] Feature: Added "Send Invoice to Client" modal on the frontend Invoice Preview page to utilize the manual dispatch endpoints.
 41i. [x] Feature: Extracted email SMTP logic to `lib/email_utils.py` and added manual email verification flow (verification token generation on registration, `/verify-email`, `/resend-verification`, and login verification enforcement).
 41j. [x] Feature: Added frontend verification states: calm "check inbox" state on Register page, "please verify" error capture on Login page, and a new `/verify-email` page to process token links along with `resendVerificationEmail` helper in api.ts.
+41k. [x] Feature: Implemented backend notifications system (`lib/notifications.py` and `GET /api/notifications` endpoint) running four targeted Mongo queries for overdue payments, payments due soon, upcoming deadlines, and uninvoiced milestones, sorted by urgency.
+41l. [x] Feature: Added glass-surface notifications panel above the contract grid on the frontend Dashboard to display sorted alerts (overdue, due soon, deadlines, uninvoiced) with slide/fade animation, mobile responsive stacking, and inline "Mark Paid" and "Generate Invoice" async actions with per-row loading and inline error states.
+41m. [x] Feature: Added goodwill discount and delay acknowledgment support for missed deadline invoices, including ReportLab discount line rendering, dynamic delayed Groq cover note generation, and new validated POST /api/milestones/{id}/invoice-missed-deadline endpoint.
+41n. [x] Feature: Implemented the frontend "Missed Deadline" flow on MilestoneCard (split buttons in TRIGGERED state, glass-surface dialog, integer discount input validation, live client-side discount preview) and updated the Invoice detail page (muted "Goodwill Discount Applied" badge, original amount struck-through).
+41o. [x] Feature: Added three new delivery-level notification types (MISSED_DELIVERY, DELIVERY_REMINDER, UNINVOICED_TRIGGERED) to backend `lib/notifications.py` with updated urgency sorting order.
+41p. [x] Feature: Updated Dashboard notification panel frontend to render the three new delivery-level notification types (MISSED_DELIVERY, DELIVERY_REMINDER, UNINVOICED_TRIGGERED) with dedicated icons, inline actions, and error handling.
 
 ### Phase 8 — Evaluation + hardening
 42. Test set: 20 freelance contracts across four types

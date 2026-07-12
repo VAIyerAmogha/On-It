@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, CheckCircle2, FileText, ArrowRight, Receipt } from 'lucide-react';
+import { Loader2, CheckCircle2, FileText, ArrowRight, Receipt, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 
 export interface Milestone {
@@ -20,12 +20,20 @@ interface MilestoneCardProps {
   milestone: Milestone;
   onTrigger: (id: string) => Promise<void>;
   onInvoice: (id: string) => Promise<void>;
+  onMissedDeadline: (id: string, discountPercentage: number) => Promise<void>;
   onPaid: (id: string) => Promise<void>;
 }
 
-export default function MilestoneCard({ milestone, onTrigger, onInvoice, onPaid }: MilestoneCardProps) {
+export default function MilestoneCard({ milestone, onTrigger, onInvoice, onMissedDeadline, onPaid }: MilestoneCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [resolvedInvoiceId, setResolvedInvoiceId] = useState<string | undefined>(milestone.invoice_id);
+  
+  // Modal states
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [discountInput, setDiscountInput] = useState('');
+  const [isModalSubmitting, setIsModalSubmitting] = useState(false);
+  const [fieldError, setFieldError] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
 
   // If status indicates an invoice should exist but invoice_id wasn't provided,
   // fetch it directly from the by-milestone endpoint as a fallback
@@ -80,6 +88,40 @@ export default function MilestoneCard({ milestone, onTrigger, onInvoice, onPaid 
     }
   };
 
+  const handleCloseModal = () => {
+    if (isModalSubmitting) return;
+    setIsModalOpen(false);
+    setDiscountInput('');
+    setFieldError('');
+    setErrorMsg('');
+  };
+
+  const handleConfirmDiscount = async () => {
+    const val = parseInt(discountInput);
+    if (!discountInput.trim() || isNaN(val) || val < 1 || val > 100) {
+      setFieldError('Discount percentage must be an integer between 1 and 100');
+      return;
+    }
+    
+    setIsModalSubmitting(true);
+    setErrorMsg('');
+    try {
+      await onMissedDeadline(milestone._id, val);
+      setIsModalOpen(false);
+      setDiscountInput('');
+    } catch (e: any) {
+      setErrorMsg(e.message || 'Failed to generate missed deadline invoice');
+    } finally {
+      setIsModalSubmitting(false);
+    }
+  };
+
+  // Client-side calculations for the live preview
+  const original = milestone.amount_inr || 0;
+  const discountVal = parseInt(discountInput) || 0;
+  const discountAmount = original * (discountVal / 100);
+  const discounted = Math.max(0, original - discountAmount);
+
   return (
     <div className="glass-surface p-6 rounded-2xl flex flex-col h-full hover:shadow-lg transition-shadow">
       <div className="flex justify-between items-start mb-4">
@@ -129,14 +171,24 @@ export default function MilestoneCard({ milestone, onTrigger, onInvoice, onPaid 
         )}
 
         {milestone.status === 'TRIGGERED' && (
-          <button
-            onClick={() => handleAction(onInvoice)}
-            disabled={isLoading}
-            className="w-full bg-accent-500/10 hover:bg-accent-500/20 text-accent-600 dark:text-accent-400 py-2.5 rounded-xl text-sm font-medium transition-colors flex justify-center items-center gap-2"
-          >
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-            Generate Invoice
-          </button>
+          <div className="w-full flex gap-2">
+            <button
+              onClick={() => handleAction(onInvoice)}
+              disabled={isLoading}
+              className="flex-1 bg-accent-500/10 hover:bg-accent-500/20 text-accent-600 dark:text-accent-400 py-2.5 rounded-xl text-sm font-medium transition-colors flex justify-center items-center gap-2"
+            >
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+              Generate Invoice
+            </button>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              disabled={isLoading}
+              className="flex-1 border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 py-2.5 rounded-xl text-sm font-medium transition-colors flex justify-center items-center gap-2"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              Missed Deadline
+            </button>
+          </div>
         )}
 
         {(milestone.status === 'INVOICED' || milestone.status === 'OVERDUE') && (
@@ -181,6 +233,82 @@ export default function MilestoneCard({ milestone, onTrigger, onInvoice, onPaid 
           </div>
         )}
       </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
+          <div className="glass-surface w-full max-w-md rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in duration-200">
+            <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
+              Missed Deadline Invoice
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+                  Discount Percentage
+                </label>
+                <div className="relative flex items-center">
+                  <input
+                    type="number"
+                    step="1"
+                    min="1"
+                    max="100"
+                    placeholder="e.g. 15"
+                    value={discountInput}
+                    onChange={(e) => {
+                      setDiscountInput(e.target.value);
+                      setFieldError('');
+                      setErrorMsg('');
+                    }}
+                    className={`w-full bg-black/5 dark:bg-white/5 border ${
+                      fieldError ? 'border-red-500/50' : 'border-transparent focus:border-accent-500/50'
+                    } rounded-lg pl-4 pr-10 py-2.5 outline-none transition-colors font-medium`}
+                  />
+                  <span className="absolute right-4 text-gray-500 font-medium">%</span>
+                </div>
+                {fieldError && (
+                  <p className="text-xs text-red-500 mt-1 font-medium">{fieldError}</p>
+                )}
+              </div>
+              
+              <div className="bg-black/5 dark:bg-white/5 p-3 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-400">
+                Invoice amount: ₹{discounted.toLocaleString('en-IN')} (₹{original.toLocaleString('en-IN')} - {discountVal}%)
+              </div>
+              
+              {errorMsg && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-400 text-xs rounded-lg font-medium">
+                  {errorMsg}
+                </div>
+              )}
+              
+              <div className="flex justify-end gap-3 pt-4 border-t border-black/5 dark:border-white/5">
+                <button
+                  type="button"
+                  onClick={handleCloseModal}
+                  disabled={isModalSubmitting}
+                  className="px-5 py-2 rounded-xl text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50 text-gray-700 dark:text-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDiscount}
+                  disabled={isModalSubmitting}
+                  className="bg-accent-500 hover:bg-accent-600 text-white text-sm font-medium px-5 py-2 rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50 shadow-md shadow-accent-500/20"
+                >
+                  {isModalSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    'Generate Missed Deadline Invoice'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

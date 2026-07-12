@@ -148,3 +148,37 @@ async def create_milestone_invoice(
     invoice = create_invoice(db, id, edited_amount=edited_amount)
     invoice["_id"] = str(invoice["_id"])
     return invoice
+
+class MissedDeadlineInvoiceRequest(BaseModel):
+    discount_percentage: float
+
+@router.post("/{id}/invoice-missed-deadline")
+async def create_missed_deadline_invoice(
+    id: str,
+    request: MissedDeadlineInvoiceRequest,
+    freelancer_id: str = Depends(get_current_user_id)
+):
+    if request.discount_percentage <= 0 or request.discount_percentage > 100:
+        raise HTTPException(status_code=422, detail="Discount percentage must be greater than 0 and less than or equal to 100")
+        
+    db = get_db()
+    try:
+        query_id = ObjectId(id)
+    except Exception:
+        query_id = id
+        
+    milestone = db.milestones.find_one({"_id": query_id, "freelancer_id": freelancer_id})
+    if not milestone:
+        raise HTTPException(status_code=404, detail="Milestone not found")
+        
+    if milestone.get("status") != "TRIGGERED":
+        raise HTTPException(status_code=409, detail=f"Milestone is currently '{milestone.get('status')}', not TRIGGERED")
+        
+    try:
+        from lib.invoice_gen import create_invoice
+    except ImportError:
+        from backend.lib.invoice_gen import create_invoice
+        
+    invoice = create_invoice(db, id, delivery_missed=True, discount_percentage=request.discount_percentage)
+    invoice["_id"] = str(invoice["_id"])
+    return invoice

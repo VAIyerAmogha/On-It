@@ -1,12 +1,21 @@
 1. invoice gen ---- Done
 3. context of completion to the groq chatbot ---- Done
-6. email verification for signing in
-2. dates and current date checking and calender
+6. email verification for signing in ---- Done
 4. email sending ---- Done
-5. UI enhancements
+5. UI enhancements 
 7. oauth ---- DONE
 8. new user must put in details about the business like gst number, org name, address.wire them to the invoice and show in dashboard
 9. invoice is still showing to none
 10. dashboard showing 2 out of 5
 11. cleanup of project 
 
+
+2. Income Analytics Dashboard
+Pure read aggregation on data you're already collecting. Payment lag per client, monthly earnings chart, on-time vs late rate. After a freelancer has used the app for 2-3 months this becomes genuinely valuable — it tells them which clients to prioritize and which to be cautious of. Recharts is already in the dependency list, zero new backend infra.
+
+3. Bulk Invoice Export for Tax Season
+High perceived value, low build complexity. Indian freelancers dread March — this solves a real annual pain point with a ZIP of PDFs + a summary CSV, all from data already in GridFS and Mongo. A single new endpoint and a date range picker. The kind of feature that makes someone recommend the app to another freelancer.
+
+
+
+2. dates and current date checking and calender ---- On hold for now

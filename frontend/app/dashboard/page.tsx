@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '../../lib/api';
-import { FileText, Plus, FileSearch, Trash2 } from 'lucide-react';
+import { FileText, Plus, FileSearch, Trash2, Bell, AlertCircle, Clock, CalendarClock, FileWarning, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 
@@ -18,11 +18,162 @@ interface Contract {
   created_at: string;
 }
 
+interface Notification {
+  type: 'OVERDUE_PAYMENT' | 'PAYMENT_DUE_SOON' | 'UPCOMING_DEADLINE' | 'UNINVOICED_MILESTONE' | 'MISSED_DELIVERY' | 'UNINVOICED_TRIGGERED' | 'DELIVERY_REMINDER';
+  milestone_id: string;
+  contract_id: string;
+  contract_title: string;
+  client_name: string;
+  milestone_number: number | null;
+  deliverable_description: string | null;
+  amount_inr: number | null;
+  due_date: string | null;
+  trigger_date: string | null;
+  days_overdue: number | null;
+  days_until_due: number | null;
+  days_until_deadline: number | null;
+  days_since_triggered: number | null;
+}
+
 export default function Dashboard() {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { token } = useAuth();
+
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isNotifLoading, setIsNotifLoading] = useState(true);
+  const [isDismissed, setIsDismissed] = useState(false);
+  const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
+  const [errorMap, setErrorMap] = useState<Record<string, string>>({});
+  const [fadingMap, setFadingMap] = useState<Record<string, boolean>>({});
+
+  const handleMarkPaid = async (milestoneId: string) => {
+    setLoadingMap(prev => ({ ...prev, [milestoneId]: true }));
+    setErrorMap(prev => ({ ...prev, [milestoneId]: '' }));
+    
+    try {
+      await apiFetch(`/api/milestones/${milestoneId}/paid`, {
+        method: 'PATCH',
+      });
+      
+      // Success: trigger fade-out
+      setFadingMap(prev => ({ ...prev, [milestoneId]: true }));
+      setTimeout(() => {
+        setNotifications(prev => prev.filter(n => n.milestone_id !== milestoneId));
+        setFadingMap(prev => {
+          const copy = { ...prev };
+          delete copy[milestoneId];
+          return copy;
+        });
+        setLoadingMap(prev => {
+          const copy = { ...prev };
+          delete copy[milestoneId];
+          return copy;
+        });
+      }, 300);
+    } catch (err: any) {
+      console.error('Failed to mark milestone as paid:', err);
+      setErrorMap(prev => ({ ...prev, [milestoneId]: err.message || 'Failed to update' }));
+      setLoadingMap(prev => ({ ...prev, [milestoneId]: false }));
+    }
+  };
+
+  const handleMarkTriggered = async (milestoneId: string) => {
+    setLoadingMap(prev => ({ ...prev, [milestoneId]: true }));
+    setErrorMap(prev => ({ ...prev, [milestoneId]: '' }));
+    
+    try {
+      await apiFetch(`/api/milestones/${milestoneId}/trigger`, {
+        method: 'PATCH',
+      });
+      
+      // Success: trigger fade-out
+      setFadingMap(prev => ({ ...prev, [milestoneId]: true }));
+      setTimeout(() => {
+        setNotifications(prev => prev.filter(n => n.milestone_id !== milestoneId));
+        setFadingMap(prev => {
+          const copy = { ...prev };
+          delete copy[milestoneId];
+          return copy;
+        });
+        setLoadingMap(prev => {
+          const copy = { ...prev };
+          delete copy[milestoneId];
+          return copy;
+        });
+      }, 300);
+    } catch (err: any) {
+      console.error('Failed to mark milestone as triggered:', err);
+      setErrorMap(prev => ({ ...prev, [milestoneId]: err.message || 'Failed to update' }));
+      setLoadingMap(prev => ({ ...prev, [milestoneId]: false }));
+    }
+  };
+
+  const handleGenerateInvoice = async (milestoneId: string) => {
+    setLoadingMap(prev => ({ ...prev, [milestoneId]: true }));
+    setErrorMap(prev => ({ ...prev, [milestoneId]: '' }));
+    
+    try {
+      await apiFetch(`/api/milestones/${milestoneId}/invoice`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      
+      // Success: trigger fade-out
+      setFadingMap(prev => ({ ...prev, [milestoneId]: true }));
+      setTimeout(() => {
+        setNotifications(prev => prev.filter(n => n.milestone_id !== milestoneId));
+        setFadingMap(prev => {
+          const copy = { ...prev };
+          delete copy[milestoneId];
+          return copy;
+        });
+        setLoadingMap(prev => {
+          const copy = { ...prev };
+          delete copy[milestoneId];
+          return copy;
+        });
+      }, 300);
+    } catch (err: any) {
+      console.error('Failed to generate invoice:', err);
+      setErrorMap(prev => ({ ...prev, [milestoneId]: err.message || 'Failed to generate' }));
+      setLoadingMap(prev => ({ ...prev, [milestoneId]: false }));
+    }
+  };
+
+  const getCenterContent = (notif: Notification) => {
+    switch (notif.type) {
+      case 'MISSED_DELIVERY':
+        return `Delivery missed by ${notif.days_overdue} days — not yet triggered`;
+      case 'OVERDUE_PAYMENT':
+        return `₹${notif.amount_inr?.toLocaleString('en-IN') || 0} overdue by ${notif.days_overdue} days`;
+      case 'PAYMENT_DUE_SOON':
+        return `₹${notif.amount_inr?.toLocaleString('en-IN') || 0} due in ${notif.days_until_due} days`;
+      case 'UNINVOICED_TRIGGERED':
+        return `Triggered — deadline passed ${notif.days_since_triggered} days ago, invoice not raised`;
+      case 'UPCOMING_DEADLINE':
+      case 'DELIVERY_REMINDER': {
+        const desc = notif.deliverable_description || '';
+        const trunc = desc.length > 60 ? desc.substring(0, 60) + '...' : desc;
+        return `Due in ${notif.days_until_deadline} days — ${trunc}`;
+      }
+      case 'UNINVOICED_MILESTONE':
+        return `Triggered ${notif.days_since_triggered} days ago — invoice not raised yet`;
+      default:
+        return '';
+    }
+  };
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (e) {
+      return dateStr;
+    }
+  };
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -57,6 +208,26 @@ export default function Dashboard() {
     };
 
     fetchContracts();
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) {
+      setIsNotifLoading(false);
+      return;
+    }
+
+    const fetchNotifications = async () => {
+      try {
+        const data = await apiFetch('/api/notifications');
+        setNotifications(data.notifications || []);
+      } catch (error) {
+        console.error('Failed to fetch notifications:', error);
+      } finally {
+        setIsNotifLoading(false);
+      }
+    };
+
+    fetchNotifications();
   }, [token]);
 
   if (isLoading) {
@@ -118,6 +289,154 @@ export default function Dashboard() {
           New Contract
         </Link>
       </div>
+
+      {/* Notifications Panel */}
+      {notifications.length > 0 && !isDismissed && (
+        <div className="glass-surface p-6 rounded-2xl animate-fade-in-up">
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-2 text-foreground font-semibold">
+              <Bell className="w-5 h-5 text-accent-500" />
+              <span>{notifications.length} {notifications.length === 1 ? 'item needs' : 'items need'} your attention</span>
+            </div>
+            <button 
+              onClick={() => setIsDismissed(true)} 
+              className="text-sm font-medium text-gray-500 hover:text-foreground transition-colors cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
+          <div className="space-y-4 divide-y divide-black/5 dark:divide-white/5">
+            {notifications.map((notif) => (
+              <div 
+                key={`${notif.type}-${notif.milestone_id}`} 
+                className={`py-4 first:pt-0 last:pb-0 grid grid-cols-1 md:grid-cols-12 items-start md:items-center gap-4 transition-all duration-300 ${fadingMap[notif.milestone_id] ? 'opacity-0 -translate-x-4 pointer-events-none' : ''}`}
+              >
+                {/* Left Column */}
+                <div className="flex items-start gap-3 md:col-span-6">
+                  {notif.type === 'MISSED_DELIVERY' && <XCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />}
+                  {notif.type === 'OVERDUE_PAYMENT' && <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />}
+                  {notif.type === 'PAYMENT_DUE_SOON' && <Clock className="w-5 h-5 text-accent-500 shrink-0 mt-0.5" />}
+                  {(notif.type === 'UPCOMING_DEADLINE' || notif.type === 'DELIVERY_REMINDER') && <CalendarClock className="w-5 h-5 text-violet-500 shrink-0 mt-0.5" />}
+                  {(notif.type === 'UNINVOICED_MILESTONE' || notif.type === 'UNINVOICED_TRIGGERED') && <FileWarning className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-foreground leading-snug line-clamp-2 md:line-clamp-1">
+                      {notif.contract_title} — Milestone {notif.milestone_number}
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">
+                      {notif.client_name}
+                    </div>
+                    
+                    {/* Mobile Center Column Text (visible on mobile only) */}
+                    <div className="block md:hidden mt-2 text-sm font-medium text-foreground">
+                      {getCenterContent(notif)}
+                    </div>
+                    {(notif.type === 'UPCOMING_DEADLINE' || notif.type === 'DELIVERY_REMINDER' || notif.type === 'MISSED_DELIVERY') && notif.trigger_date && (
+                      <div className="block md:hidden text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {notif.type === 'MISSED_DELIVERY' ? 'Trigger Date: ' : 'Deadline Date: '}
+                        {formatDate(notif.trigger_date)}
+                      </div>
+                    )}
+                    
+                    {/* Mobile/Inline error display */}
+                    {errorMap[notif.milestone_id] && (
+                      <div className="text-xs text-red-500 dark:text-red-400 mt-2 font-medium">
+                        Error: {errorMap[notif.milestone_id]}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Center Column (desktop only) */}
+                <div className="hidden md:flex flex-col items-center justify-center text-center px-4 md:col-span-3">
+                  <span className="font-medium text-foreground">{getCenterContent(notif)}</span>
+                  {(notif.type === 'UPCOMING_DEADLINE' || notif.type === 'DELIVERY_REMINDER' || notif.type === 'MISSED_DELIVERY') && notif.trigger_date && (
+                    <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {formatDate(notif.trigger_date)}
+                    </span>
+                  )}
+                </div>
+
+                {/* Right Column / Actions */}
+                <div className="flex items-center gap-2 justify-start md:justify-end md:col-span-3 shrink-0 flex-wrap">
+                  {notif.type === 'MISSED_DELIVERY' && (
+                    <>
+                      <button
+                        onClick={() => handleMarkTriggered(notif.milestone_id)}
+                        disabled={loadingMap[notif.milestone_id]}
+                        className="px-3 py-1.5 bg-accent-500 hover:bg-accent-600 disabled:bg-accent-500/50 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                      >
+                        {loadingMap[notif.milestone_id] ? 'Updating...' : 'Mark Triggered'}
+                      </button>
+                      <Link
+                        href={`/contracts/${notif.contract_id}#milestone-${notif.milestone_id}`}
+                        className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold rounded-lg transition-colors"
+                      >
+                        Missed Deadline Invoice
+                      </Link>
+                      <Link
+                        href={`/contracts/${notif.contract_id}`}
+                        className="px-3 py-1.5 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-foreground text-xs font-semibold rounded-lg transition-colors"
+                      >
+                        View
+                      </Link>
+                    </>
+                  )}
+                  {notif.type === 'OVERDUE_PAYMENT' && (
+                    <>
+                      <button
+                        onClick={() => handleMarkPaid(notif.milestone_id)}
+                        disabled={loadingMap[notif.milestone_id]}
+                        className="px-3 py-1.5 bg-accent-500 hover:bg-accent-600 disabled:bg-accent-500/50 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                      >
+                        {loadingMap[notif.milestone_id] ? 'Updating...' : 'Mark Paid'}
+                      </button>
+                      <Link
+                        href={`/contracts/${notif.contract_id}`}
+                        className="px-3 py-1.5 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-foreground text-xs font-semibold rounded-lg transition-colors"
+                      >
+                        View
+                      </Link>
+                    </>
+                  )}
+                  {notif.type === 'PAYMENT_DUE_SOON' && (
+                    <Link
+                      href={`/contracts/${notif.contract_id}`}
+                      className="px-3 py-1.5 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-foreground text-xs font-semibold rounded-lg transition-colors"
+                    >
+                      View
+                    </Link>
+                  )}
+                  {(notif.type === 'UPCOMING_DEADLINE' || notif.type === 'DELIVERY_REMINDER') && (
+                    <Link
+                      href={`/contracts/${notif.contract_id}`}
+                      className="px-3 py-1.5 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-foreground text-xs font-semibold rounded-lg transition-colors"
+                    >
+                      View
+                    </Link>
+                  )}
+                  {(notif.type === 'UNINVOICED_MILESTONE' || notif.type === 'UNINVOICED_TRIGGERED') && (
+                    <>
+                      <button
+                        onClick={() => handleGenerateInvoice(notif.milestone_id)}
+                        disabled={loadingMap[notif.milestone_id]}
+                        className="px-3 py-1.5 bg-accent-500 hover:bg-accent-600 disabled:bg-accent-500/50 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                      >
+                        {loadingMap[notif.milestone_id] ? 'Generating...' : 'Generate Invoice'}
+                      </button>
+                      <Link
+                        href={`/contracts/${notif.contract_id}`}
+                        className="px-3 py-1.5 bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-foreground text-xs font-semibold rounded-lg transition-colors"
+                      >
+                        View
+                      </Link>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {contracts.map((contract) => (

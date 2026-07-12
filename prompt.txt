@@ -1,39 +1,56 @@
 Refer CLAUDE.md and Plan.md. 
 
-Modify the existing register page, add a new verify-email page, and modify
-the existing login page. Follow the locked design system (glass-surface,
-Violet + Graphite, Lucide icons, calm non-alarming states).
+Modify the Dashboard notification panel built in the dashboard notification
+system feature. Add rendering for the three new notification types
+alongside the existing four. Follow the locked design system throughout.
 
-1. Register page: on successful POST /api/auth/register (manual path),
-   since it no longer returns a JWT, do not redirect to the dashboard.
-   Instead show a calm "check your inbox" glass-surface state on the same
-   page (email icon, message telling them to click the link sent to
-   {email}). Include a "Resend verification email" link/button that calls
-   POST /api/auth/resend-verification with the registered email and shows
-   a brief confirmation toast/state (not an alarming error style even if
-   it silently no-ops server-side).
+1. MISSED_DELIVERY row:
+   - Left: Lucide `XCircle` icon in muted red (this IS the most urgent
+     state — slightly stronger visual than amber, still not harsh).
+     "{contract_title} — Milestone {milestone_number}" bold,
+     "{client_name}" muted below.
+   - Center: "Delivery missed by {days_overdue} days — not yet triggered"
+     with trigger_date shown as human-readable date in muted text below.
+   - Right: "Mark as Triggered" button (calls existing
+     PATCH /api/milestones/{id}/trigger, removes row on success) and
+     "Missed Deadline Invoice" button (navigates to the contract detail
+     page with the milestone pre-scrolled into view, where the user can
+     use the Missed Deadline flow from Feature 1 — do not inline the
+     discount modal here, just navigate). And "View" button.
 
-2. New page pages/verify-email.tsx (Pages Router, matches existing routing
-   convention):
-   - Reads `token` from the query string.
-   - On mount, calls GET /api/auth/verify-email?token=... .
-   - Success: show a calm success state with a "Go to Login" button/link
-     to /auth/login.
-   - Failure (invalid or expired token): show a calm (not alarming) error
-     state explaining the link is invalid/expired, with a way to enter
-     their email and trigger resend-verification from this same page
-     (reuse the same resend call as the register page — don't duplicate
-     the fetch logic, share a small helper in api.ts).
+2. UPCOMING_DEADLINE row:
+   - Left: Lucide `CalendarClock` icon in muted violet.
+     "{contract_title} — Milestone {milestone_number}" bold,
+     "{client_name}" muted.
+   - Center: "Due in {days_until_deadline} days —
+     {deliverable_description truncated to 60 chars}" with trigger_date
+     as human-readable date in muted text.
+   - Right: "View" button only.
 
-3. Login page: when POST /api/auth/login returns 403 with
-   error_code "EMAIL_NOT_VERIFIED", do not show the generic
-   wrong-credentials error state. Show a distinct message ("please verify
-   your email first") with a "Resend verification email" action, reusing
-   the same shared resend helper from api.ts. Google OAuth sign-in on this
-   same page is unaffected — only the manual-login error branch changes.
+3. UNINVOICED_TRIGGERED row:
+   - Left: Lucide `FileWarning` icon in muted amber.
+     "{contract_title} — Milestone {milestone_number}" bold,
+     "{client_name}" muted.
+   - Center: "Triggered — deadline passed {days_since_triggered} days ago,
+     invoice not raised"
+   - Right: "Generate Invoice" button (calls existing
+     POST /api/milestones/{id}/invoice inline, removes row on success)
+     and "View" button.
 
-4. Do not add any new global state management — follow the existing
-   AuthContext / api.ts fetch wrapper pattern already used on these pages.
+4. Update the panel header count to include the new types in the total.
+
+5. Update the sort order rendering to match the backend sort:
+   MISSED_DELIVERY → OVERDUE_PAYMENT → PAYMENT_DUE_SOON →
+   UNINVOICED_TRIGGERED → UPCOMING_DEADLINE → UNINVOICED_MILESTONE.
+   The frontend must not re-sort — render in the order the backend returns.
+
+6. No new global state. Extend the existing local state in the dashboard
+   component to handle loading/error states for the new inline action
+   buttons ("Mark as Triggered" on MISSED_DELIVERY rows,
+   "Generate Invoice" on UNINVOICED_TRIGGERED rows) using the same
+   per-row loading state pattern already established.
+
+no need to run any tests
 
 
 log updates CLAUDE.md and Plan.md with the exisiting format

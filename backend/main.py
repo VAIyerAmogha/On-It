@@ -7,6 +7,7 @@ from routers.contracts import router as contracts_router
 from routers.milestones import router as milestones_router
 from routers.invoices import router as invoices_router
 from routers.contract_qa import router as contract_qa_router
+from routers.notifications import router as notifications_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("startup")
@@ -29,6 +30,7 @@ app.include_router(contracts_router, prefix="/api/contracts", tags=["contracts"]
 app.include_router(milestones_router, prefix="/api/milestones", tags=["milestones"])
 app.include_router(invoices_router, prefix="/api/invoices", tags=["invoices"])
 app.include_router(contract_qa_router, prefix="/api/contracts", tags=["contract_qa"])
+app.include_router(notifications_router, prefix="/api/notifications", tags=["notifications"])
 
 @app.get("/health")
 async def health():
