@@ -8,13 +8,13 @@ export default function Header() {
   const { user, logout } = useAuth();
 
   return (
-    <header className="h-16 fixed top-0 right-0 left-64 glass-surface border-b z-10 flex items-center justify-between px-8">
+    <header className="h-16 fixed top-0 right-0 left-64 bg-bg-base border-b border-border-subtle z-10 flex items-center justify-between px-8 text-text-primary">
       <div></div>
       <div className="flex items-center gap-4">
-        <ThemeToggle />
-        <div className="flex items-center gap-4 pl-4 border-l border-gray-200 dark:border-gray-800">
+        <ThemeToggle className="text-text-muted hover:bg-bg-elevated hover:text-text-primary" />
+        <div className="flex items-center gap-4 pl-4 border-l border-border-subtle">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-accent-500/20 flex items-center justify-center text-accent-600 dark:text-accent-400">
+            <div className="w-8 h-8 rounded-full bg-bg-elevated flex items-center justify-center text-text-secondary">
               <User className="w-4 h-4" />
             </div>
             <span className="font-medium text-sm hidden sm:block">
@@ -23,7 +23,7 @@ export default function Header() {
           </div>
           <button 
             onClick={logout}
-            className="text-gray-500 hover:text-red-500 transition-colors"
+            className="text-text-muted hover:text-danger transition-colors cursor-pointer"
             title="Log out"
           >
             <LogOut className="w-4 h-4" />

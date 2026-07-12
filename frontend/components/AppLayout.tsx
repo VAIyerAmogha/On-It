@@ -2,13 +2,11 @@
 
 import { usePathname } from 'next/navigation';
 import Sidebar from './Sidebar';
-import Header from './Header';
 import { HealthPing } from './HealthPing';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAuthRoute = pathname.startsWith('/auth');
-
   const isLandingRoute = pathname === '/';
 
   if (isLandingRoute) {
@@ -17,7 +15,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (isAuthRoute) {
     return (
-      <main className="min-h-screen w-full flex items-center justify-center p-4">
+      <main className="min-h-screen w-full flex items-center justify-center p-4 bg-bg-base">
         {children}
       </main>
     );
@@ -27,9 +25,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <>
       <HealthPing />
       <Sidebar />
-      <Header />
-      <main className="flex-1 ml-64 mt-16 p-8 min-h-[calc(100vh-4rem)] relative z-0">
-        {children}
+      <main className="flex-1 ml-[240px] p-8 min-h-screen relative z-0 bg-bg-base">
+        <div className="max-w-5xl mx-auto w-full animate-fade-in-up">
+          {children}
+        </div>
       </main>
     </>
   );

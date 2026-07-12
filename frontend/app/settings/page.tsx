@@ -2,11 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../../lib/api';
-import { Save, CheckCircle2, User, Building, Mail, Landmark, Loader2 } from 'lucide-react';
+import { Save, User, Building, Mail, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import Button from '../../components/Button';
+import { Input } from '../../components/Input';
+import { Card, CardBody } from '../../components/Card';
+import Skeleton from '../../components/Skeleton';
+import { useToast } from '../../context/ToastContext';
 
 export default function SettingsPage() {
   const { token } = useAuth();
+  const { showToast } = useToast();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -20,7 +26,6 @@ export default function SettingsPage() {
   
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -40,13 +45,14 @@ export default function SettingsPage() {
         });
       } catch (err: any) {
         setError('Failed to load settings.');
+        showToast('Failed to load settings', 'error');
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchSettings();
-  }, [token]);
+  }, [token, showToast]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
@@ -74,11 +80,11 @@ export default function SettingsPage() {
         body: JSON.stringify(payload)
       });
       
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
-      setFormData(prev => ({ ...prev, gmail_app_password: '' })); // clear on success
+      showToast('Settings saved successfully', 'success');
+      setFormData(prev => ({ ...prev, gmail_app_password: '' })); // clear password input field
     } catch (err: any) {
       setError(err.message || 'Failed to save settings.');
+      showToast(err.message || 'Failed to save settings', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -86,10 +92,10 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto space-y-8 animate-pulse">
-        <div className="w-48 h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
-        <div className="glass-surface p-8 rounded-3xl h-64 bg-gray-200/50 dark:bg-gray-700/50"></div>
-        <div className="glass-surface p-8 rounded-3xl h-64 bg-gray-200/50 dark:bg-gray-700/50"></div>
+      <div className="max-w-4xl mx-auto space-y-8">
+        <Skeleton variant="rect" className="h-10 w-48" />
+        <Skeleton variant="rect" className="h-64 w-full" />
+        <Skeleton variant="rect" className="h-64 w-full" />
       </div>
     );
   }
@@ -97,29 +103,23 @@ export default function SettingsPage() {
   return (
     <div className="max-w-4xl mx-auto pb-12">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-        <h1 className="text-3xl font-bold">Settings</h1>
+        <h1 className="text-3xl font-bold text-text-primary">Settings</h1>
         
         <div className="flex items-center gap-4 w-full sm:w-auto justify-end">
-          {showSuccess && (
-            <div className="flex items-center gap-2 text-emerald-500 font-medium text-sm animate-in fade-in slide-in-from-right-4 duration-300">
-              <CheckCircle2 className="w-4 h-4" />
-              Saved successfully
-            </div>
-          )}
-          
-          <button
+          <Button
             onClick={handleSubmit}
-            disabled={isSaving}
-            className="bg-accent-500 hover:bg-accent-600 text-white px-6 py-2.5 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 min-w-[140px]"
+            variant="primary"
+            isLoading={isSaving}
+            className="w-full sm:w-auto min-w-[140px]"
           >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {!isSaving && <Save className="w-4 h-4 shrink-0" strokeWidth={2} />}
             Save Changes
-          </button>
+          </Button>
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-xl text-sm mb-8">
+        <div className="bg-danger/10 border border-danger/20 text-danger p-4 rounded-md text-sm mb-8 font-medium">
           {error}
         </div>
       )}
@@ -127,128 +127,113 @@ export default function SettingsPage() {
       <form onSubmit={handleSubmit} className="space-y-8">
         
         {/* Profile Group */}
-        <div className="glass-surface p-8 rounded-3xl">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-accent-500/10 flex items-center justify-center text-accent-600 dark:text-accent-400">
-              <User className="w-5 h-5" />
+        <Card variant="default">
+          <CardBody className="p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-md bg-accent-subtle flex items-center justify-center text-accent border border-accent/10">
+                <User className="w-5 h-5" strokeWidth={1.5} />
+              </div>
+              <h2 className="text-xl font-bold text-text-primary">Profile & Business Details</h2>
             </div>
-            <h2 className="text-xl font-bold">Profile & Business Details</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Full Name / Business Name</label>
-              <input
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Input
+                label="Full Name / Business Name"
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white/50 dark:bg-black/50 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:border-accent-500 transition-colors"
                 placeholder="Jane Doe"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">GSTIN (Optional)</label>
-              <input
+              <Input
+                label="GSTIN (Optional)"
                 type="text"
                 name="gstin"
                 value={formData.gstin}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white/50 dark:bg-black/50 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:border-accent-500 transition-colors"
                 placeholder="22AAAAA0000A1Z5"
               />
+              <div className="md:col-span-2">
+                <Input
+                  label="Billing Address"
+                  type="text"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  placeholder="123 Freelancer Street, City, State, ZIP"
+                />
+              </div>
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Billing Address</label>
-              <input
-                type="text"
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white/50 dark:bg-black/50 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:border-accent-500 transition-colors"
-                placeholder="123 Freelancer Street, City, State, ZIP"
-              />
-            </div>
-          </div>
-        </div>
+          </CardBody>
+        </Card>
 
         {/* Invoicing Settings */}
-        <div className="glass-surface p-8 rounded-3xl">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-accent-500/10 flex items-center justify-center text-accent-600 dark:text-accent-400">
-              <Building className="w-5 h-5" />
+        <Card variant="default">
+          <CardBody className="p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-md bg-accent-subtle flex items-center justify-center text-accent border border-accent/10">
+                <Building className="w-5 h-5" strokeWidth={1.5} />
+              </div>
+              <h2 className="text-xl font-bold text-text-primary">Invoicing Defaults</h2>
             </div>
-            <h2 className="text-xl font-bold">Invoicing Defaults</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Invoice Prefix</label>
-              <input
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Input
+                label="Invoice Prefix"
                 type="text"
                 name="invoice_prefix"
                 value={formData.invoice_prefix}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white/50 dark:bg-black/50 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:border-accent-500 transition-colors"
                 placeholder="INV-"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Default GST Rate (Decimal)</label>
-              <input
+              <Input
+                label="Default GST Rate (Decimal)"
                 type="number"
                 step="0.01"
                 name="default_gst_rate"
                 value={formData.default_gst_rate}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white/50 dark:bg-black/50 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:border-accent-500 transition-colors"
                 placeholder="0.18"
+                isMono={true}
               />
             </div>
-          </div>
-        </div>
+          </CardBody>
+        </Card>
 
         {/* Email Templates */}
-        <div className="glass-surface p-8 rounded-3xl">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-accent-500/10 flex items-center justify-center text-accent-600 dark:text-accent-400">
-              <Mail className="w-5 h-5" />
+        <Card variant="default">
+          <CardBody className="p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-md bg-accent-subtle flex items-center justify-center text-accent border border-accent/10">
+                <Mail className="w-5 h-5" strokeWidth={1.5} />
+              </div>
+              <h2 className="text-xl font-bold text-text-primary">Email Integration</h2>
             </div>
-            <h2 className="text-xl font-bold">Email Integration</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Gmail Address</label>
-              <input
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Input
+                label="Gmail Address"
                 type="email"
                 name="gmail_address"
                 value={formData.gmail_address}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white/50 dark:bg-black/50 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:border-accent-500 transition-colors"
                 placeholder="you@gmail.com"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300 flex justify-between">
-                Gmail App Password
-                <span className="text-xs text-gray-500 font-normal mt-0.5">(Leave empty to keep existing)</span>
-              </label>
-              <input
+              <Input
+                label="Gmail App Password"
                 type="password"
                 name="gmail_app_password"
                 value={formData.gmail_app_password}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white/50 dark:bg-black/50 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:border-accent-500 transition-colors"
                 placeholder="••••••••••••••••"
                 autoComplete="new-password"
               />
             </div>
-          </div>
-          <p className="mt-4 text-sm text-gray-500">
-            You must generate a 16-character "App Password" in your Google Account security settings. Standard passwords will not work.
-          </p>
-        </div>
+            <p className="mt-4 text-xs text-text-muted">
+              You must generate a 16-character "App Password" in your Google Account security settings. Standard passwords will not work.
+            </p>
+          </CardBody>
+        </Card>
 
       </form>
     </div>

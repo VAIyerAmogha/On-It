@@ -54,33 +54,33 @@ export default function InvoicePreview({ invoiceId, token }: InvoicePreviewProps
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 bg-black/5 dark:bg-white/5 rounded-2xl h-[500px]">
-        <Loader2 className="w-8 h-8 animate-spin text-accent-500 mb-4" />
-        <p className="text-gray-500 font-medium">Loading preview...</p>
+      <div className="flex flex-col items-center justify-center p-12 bg-bg-elevated rounded-2xl h-[500px]">
+        <Loader2 className="w-8 h-8 animate-spin text-accent mb-4" />
+        <p className="text-text-muted font-medium">Loading preview...</p>
       </div>
     );
   }
 
   if (error || !pdfBlob) {
     return (
-      <div className="flex items-center justify-center p-12 bg-black/5 dark:bg-white/5 rounded-2xl h-[500px]">
-        <p className="text-red-500 font-medium">{error || 'Preview unavailable'}</p>
+      <div className="flex items-center justify-center p-12 bg-bg-elevated rounded-2xl h-[500px]">
+        <p className="text-danger font-medium">{error || 'Preview unavailable'}</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center w-full max-w-full overflow-hidden bg-gray-100 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
+    <div className="flex flex-col items-center w-full max-w-full overflow-hidden bg-bg-surface rounded-2xl border border-border-default">
       <div className="overflow-auto w-full max-h-[800px] flex justify-center p-4">
         <Document
           file={pdfBlob}
           onLoadSuccess={onDocumentLoadSuccess}
           loading={
             <div className="flex items-center justify-center p-12">
-              <Loader2 className="w-6 h-6 animate-spin text-accent-500" />
+              <Loader2 className="w-6 h-6 animate-spin text-accent" />
             </div>
           }
-          error={<div className="p-12 text-red-500">Failed to load PDF preview</div>}
+          error={<div className="p-12 text-danger">Failed to load PDF preview</div>}
           className="max-w-full"
         >
           <Page 
@@ -94,21 +94,21 @@ export default function InvoicePreview({ invoiceId, token }: InvoicePreviewProps
       </div>
       
       {numPages && numPages > 1 && (
-        <div className="flex items-center gap-4 p-4 border-t border-gray-200 dark:border-gray-700 w-full justify-center bg-white dark:bg-gray-900">
+        <div className="flex items-center gap-4 p-4 border-t border-border-subtle w-full justify-center bg-white">
           <button 
             disabled={pageNumber <= 1} 
             onClick={() => setPageNumber(prev => Math.max(prev - 1, 1))}
-            className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 disabled:opacity-50"
+            className="px-3 py-1 rounded bg-bg-elevated disabled:opacity-50"
           >
             Prev
           </button>
-          <p className="text-sm font-medium">
+          <p className="text-sm font-medium text-text-primary">
             Page {pageNumber} of {numPages}
           </p>
           <button 
             disabled={pageNumber >= numPages} 
             onClick={() => setPageNumber(prev => Math.min(prev + 1, numPages))}
-            className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 disabled:opacity-50"
+            className="px-3 py-1 rounded bg-bg-elevated disabled:opacity-50"
           >
             Next
           </button>

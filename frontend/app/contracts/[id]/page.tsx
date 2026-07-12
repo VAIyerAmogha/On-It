@@ -4,8 +4,14 @@ import { useEffect, useState, use } from 'react';
 import { apiFetch } from '../../../lib/api';
 import MilestoneCard, { Milestone } from '../../../components/MilestoneCard';
 import ContractQA from '../../../components/ContractQA';
-import { ArrowLeft, Building2, Calendar, FileText, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Building2, Calendar, FileText, MessageSquare, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import Button from '../../../components/Button';
+import { Card, CardBody } from '../../../components/Card';
+import Skeleton from '../../../components/Skeleton';
+import EmptyState from '../../../components/EmptyState';
+import { useToast } from '../../../context/ToastContext';
+import { useAuth } from '../../../context/AuthContext';
 
 interface Contract {
   _id: string;
@@ -27,11 +33,20 @@ interface Contract {
 
 export default function ContractPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const { token } = useAuth();
+  const { showToast } = useToast();
+  
   const [contract, setContract] = useState<Contract | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [isQAOpen, setIsQAOpen] = useState(false);
+
+  // PDF Viewer states
+  const [isPDFOpen, setIsPDFOpen] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isPDFLoading, setIsPDFLoading] = useState(false);
+  const [pdfError, setPdfError] = useState('');
 
   const fetchContractData = async () => {
     try {
@@ -62,24 +77,65 @@ export default function ContractPage({ params }: { params: Promise<{ id: string 
     return () => clearTimeout(timeout);
   }, [contract?.extraction_status, id]);
 
+  // Load PDF when collapsible section opens
+  useEffect(() => {
+    if (!isPDFOpen || pdfUrl || !token) return;
+
+    let objectUrl: string | null = null;
+    setIsPDFLoading(true);
+    setPdfError('');
+
+    const fetchPdf = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/contracts/${id}/pdf`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Contract file not found');
+        }
+        
+        const blob = await response.blob();
+        objectUrl = window.URL.createObjectURL(blob);
+        setPdfUrl(objectUrl);
+      } catch (err: any) {
+        setPdfError(err.message || 'Failed to load PDF');
+        showToast('Failed to load contract PDF', 'error');
+      } finally {
+        setIsPDFLoading(false);
+      }
+    };
+    
+    fetchPdf();
+
+    return () => {
+      if (objectUrl) window.URL.revokeObjectURL(objectUrl);
+    };
+  }, [isPDFOpen, id, token, pdfUrl, showToast]);
+
   const handleTrigger = async (milestoneId: string) => {
     await apiFetch(`/api/milestones/${milestoneId}/trigger`, { method: 'PATCH' });
+    showToast('Milestone status marked as Triggered', 'success');
     await fetchContractData();
   };
 
   const handleInvoice = async (milestoneId: string) => {
     try {
       await apiFetch(`/api/milestones/${milestoneId}/invoice`, { method: 'POST' });
-    } catch (e) {
-      console.error('Invoice generation had an error (may still have been created):', e);
+      showToast('Invoice generated successfully', 'success');
+    } catch (e: any) {
+      console.error('Invoice generation had an error:', e);
+      showToast(e.message || 'Invoice generation failed', 'error');
     } finally {
-      // Always refresh — even on error the invoice may have been created (e.g. email failure)
       await fetchContractData();
     }
   };
 
   const handlePaid = async (milestoneId: string) => {
     await apiFetch(`/api/milestones/${milestoneId}/paid`, { method: 'PATCH' });
+    showToast('Milestone status marked as Paid', 'success');
     await fetchContractData();
   };
 
@@ -89,8 +145,10 @@ export default function ContractPage({ params }: { params: Promise<{ id: string 
         method: 'POST',
         body: JSON.stringify({ discount_percentage: discountPercentage })
       });
-    } catch (e) {
-      console.error('Missed deadline invoice generation had an error:', e);
+      showToast('Missed deadline invoice generated successfully', 'success');
+    } catch (e: any) {
+      console.error('Missed deadline invoice generation failed:', e);
+      showToast(e.message || 'Invoice generation failed', 'error');
       throw e;
     } finally {
       await fetchContractData();
@@ -99,18 +157,21 @@ export default function ContractPage({ params }: { params: Promise<{ id: string 
 
   if (isLoading) {
     return (
-      <div className="animate-pulse space-y-8 max-w-5xl mx-auto">
-        <div className="w-32 h-4 bg-gray-200 dark:bg-gray-700 rounded mb-8"></div>
-        <div className="glass-surface p-8 rounded-3xl h-32 flex justify-between items-center">
-          <div className="space-y-4">
-            <div className="w-64 h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
-            <div className="w-96 h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-          </div>
-          <div className="w-24 h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
-        </div>
+      <div className="space-y-8 max-w-5xl mx-auto">
+        <Skeleton variant="rect" className="h-6 w-24" />
+        <Card variant="default" className="h-44 flex flex-col justify-between p-6">
+          <CardBody className="space-y-4">
+            <Skeleton variant="text" className="h-8 w-1/3" />
+            <Skeleton variant="text" className="h-4 w-2/3" />
+          </CardBody>
+        </Card>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
-             <div key={i} className="glass-surface p-6 rounded-2xl h-48 bg-gray-200/50 dark:bg-gray-700/50"></div>
+             <Card key={i} className="h-48">
+               <CardBody>
+                 <Skeleton variant="rect" className="h-full w-full" />
+               </CardBody>
+             </Card>
           ))}
         </div>
       </div>
@@ -120,10 +181,14 @@ export default function ContractPage({ params }: { params: Promise<{ id: string 
   if (error || !contract) {
     return (
       <div className="h-full flex items-center justify-center min-h-[60vh]">
-        <div className="glass-surface p-8 rounded-3xl text-center">
-          <h2 className="text-xl font-bold mb-4">{error || 'Contract not found'}</h2>
-          <Link href="/dashboard" className="text-accent-600 dark:text-accent-400 hover:underline">Return to Dashboard</Link>
-        </div>
+        <Card variant="default" className="p-8 text-center max-w-sm">
+          <CardBody>
+            <h2 className="text-xl font-bold mb-4 text-text-primary">{error || 'Contract not found'}</h2>
+            <Link href="/dashboard">
+              <Button variant="primary">Return to Dashboard</Button>
+            </Link>
+          </CardBody>
+        </Card>
       </div>
     );
   }
@@ -131,77 +196,89 @@ export default function ContractPage({ params }: { params: Promise<{ id: string 
   if (contract.extraction_status === 'failed') {
     return (
       <div className="h-full flex items-center justify-center min-h-[60vh]">
-        <div className="glass-surface p-8 rounded-3xl text-center max-w-lg">
-          <h2 className="text-xl font-bold mb-4 text-red-500">Extraction Failed</h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">{contract.extraction_error || 'An unknown error occurred during processing. Please ensure this is a valid contract document.'}</p>
-          <div className="flex justify-center gap-4">
-            <Link href="/dashboard" className="px-4 py-2 text-gray-500 hover:text-gray-900 transition-colors font-medium">Dashboard</Link>
-            <Link href="/contracts/upload" className="px-4 py-2 bg-accent-500 text-white rounded-xl hover:bg-accent-600 transition-colors font-medium shadow-sm">Upload Again</Link>
-          </div>
-        </div>
+        <Card variant="default" className="p-8 text-center max-w-lg border-danger/20">
+          <CardBody>
+            <h2 className="text-xl font-bold mb-4 text-danger">Extraction Failed</h2>
+            <p className="text-text-secondary text-sm mb-6 leading-relaxed">
+              {contract.extraction_error || 'An unknown error occurred during processing. Please ensure this is a valid contract document.'}
+            </p>
+            <div className="flex justify-center gap-3">
+              <Link href="/dashboard">
+                <Button variant="ghost">Dashboard</Button>
+              </Link>
+              <Link href="/contracts/upload">
+                <Button variant="primary">Upload Again</Button>
+              </Link>
+            </div>
+          </CardBody>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
-      <Link href="/dashboard" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-medium">
-        <ArrowLeft className="w-4 h-4 mr-1.5" />
+    <div className="space-y-8 max-w-5xl mx-auto pb-16">
+      <Link href="/dashboard" className="inline-flex items-center text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors">
+        <ArrowLeft className="w-4 h-4 mr-1.5" strokeWidth={2} />
         Dashboard
       </Link>
 
-      <div className="glass-surface p-8 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div>
-          <h1 className="text-3xl font-bold mb-3">{contract.title || contract.project_name || 'Untitled Project'}</h1>
-          <div className="flex flex-wrap items-center gap-6 text-sm text-gray-600 dark:text-gray-400">
-            <span className="flex items-center gap-1.5 font-medium"><Building2 className="w-4 h-4" /> {contract.client_contact?.name || contract.client_name || 'Unknown Client'}</span>
-            {contract.client_contact?.email && <span className="flex items-center gap-1.5 font-medium">{contract.client_contact.email}</span>}
-            {contract.client_contact?.phone && <span className="flex items-center gap-1.5 font-medium">{contract.client_contact.phone}</span>}
-            <span className="flex items-center gap-1.5"><FileText className="w-4 h-4" /> {contract.contract_type?.replace('_', ' ') || 'Unclassified'}</span>
-            {contract.contract_date && (
-              <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {contract.contract_date}</span>
+      <Card variant="default">
+        <CardBody className="p-8 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+          <div className="space-y-3.5 flex-1 min-w-0">
+            <h1 className="text-3xl font-bold text-text-primary tracking-tight truncate">
+              {contract.title || contract.project_name || 'Untitled Project'}
+            </h1>
+            
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-semibold text-text-secondary">
+              <span className="flex items-center gap-1.5"><Building2 className="w-4 h-4 text-text-muted" strokeWidth={1.5} /> {contract.client_contact?.name || contract.client_name || 'Unknown Client'}</span>
+              {contract.client_contact?.email && <span className="text-text-muted">{contract.client_contact.email}</span>}
+              {contract.client_contact?.phone && <span className="text-text-muted">{contract.client_contact.phone}</span>}
+              <span className="flex items-center gap-1.5"><FileText className="w-4 h-4 text-text-muted" strokeWidth={1.5} /> {contract.contract_type?.replace('_', ' ') || 'Unclassified'}</span>
+              {contract.contract_date && (
+                <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4 text-text-muted" strokeWidth={1.5} /> {contract.contract_date}</span>
+              )}
+            </div>
+
+            {contract.summary && (
+              <p className="text-sm text-text-secondary max-w-3xl leading-relaxed mt-2 pt-2 border-t border-border-subtle/30">
+                {contract.summary}
+              </p>
             )}
           </div>
-          {contract.summary && (
-            <p className="mt-4 text-sm text-gray-600 dark:text-gray-400 max-w-3xl leading-relaxed">
-              {contract.summary}
-            </p>
-          )}
-        </div>
-        <div className="md:text-right bg-black/5 dark:bg-white/5 p-4 rounded-2xl w-full md:w-auto flex flex-col md:items-end gap-3">
-          <div className="text-left md:text-right w-full">
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Total Project Value</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">
-              {contract.project_value ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(contract.project_value) : 'TBD'}
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2 w-full mt-2 md:mt-0">
-            <Link 
-              href={`/contracts/${id}/pdf`}
-              className="flex justify-center items-center gap-2 bg-gray-500/10 hover:bg-gray-500/20 text-gray-700 dark:text-gray-300 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors w-full"
-            >
-              <FileText className="w-4 h-4" />
-              View Contract
-            </Link>
-            <button 
-              onClick={() => setIsQAOpen(true)}
-              className="flex justify-center items-center gap-2 bg-accent-500/10 hover:bg-accent-500/20 text-accent-600 dark:text-accent-400 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors w-full"
-            >
-              <MessageSquare className="w-4 h-4" />
-              Ask Contract AI
-            </button>
-          </div>
-        </div>
-      </div>
 
-      <div className="pt-4">
-        <h2 className="text-xl font-bold mb-6">Payment Milestones</h2>
-        {milestones.length === 0 ? (
-          <div className="glass-surface p-12 text-center text-gray-500 rounded-3xl flex flex-col items-center">
-            <FileText className="w-12 h-12 text-gray-400 mb-4 opacity-50" />
-            <p className="text-lg font-medium text-gray-600 dark:text-gray-400">No milestones extracted</p>
-            <p className="text-sm mt-2 max-w-sm">This contract has no extracted payment milestones, or it's still processing.</p>
+          <div className="bg-bg-elevated/50 border border-border-subtle p-5 rounded-md w-full lg:w-auto flex flex-col items-start lg:items-end gap-4 shrink-0">
+            <div className="text-left lg:text-right w-full">
+              <p className="text-[10px] text-text-muted uppercase tracking-wider font-semibold mb-0.5">Total Project Value</p>
+              <p className="text-2xl font-bold text-text-primary font-mono">
+                {contract.project_value ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(contract.project_value) : 'TBD'}
+              </p>
+            </div>
+            
+            <div className="flex gap-2 w-full lg:w-auto">
+              <Button 
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsQAOpen(true)}
+                className="flex items-center justify-center gap-1.5 w-full lg:w-auto"
+              >
+                <MessageSquare className="w-4 h-4 text-accent" strokeWidth={1.5} />
+                Ask AI
+              </Button>
+            </div>
           </div>
+        </CardBody>
+      </Card>
+
+      {/* Payment Milestones */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-bold text-text-primary tracking-tight">Payment Milestones</h2>
+        {milestones.length === 0 ? (
+          <EmptyState
+            icon={FileText}
+            title="No milestones extracted"
+            description="This contract has no extracted payment milestones, or the processing engine is still running."
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {milestones.sort((a,b) => a.milestone_number - b.milestone_number).map((milestone) => (
@@ -214,6 +291,38 @@ export default function ContractPage({ params }: { params: Promise<{ id: string 
                 onPaid={handlePaid}
               />
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Collapsible PDF Section */}
+      <div className="pt-6 border-t border-border-subtle">
+        <Button
+          variant="secondary"
+          className="w-full flex items-center justify-between py-4"
+          onClick={() => setIsPDFOpen(!isPDFOpen)}
+        >
+          <span className="flex items-center gap-2">
+            <FileText className="w-5 h-5 text-accent" strokeWidth={1.5} />
+            <span className="font-semibold text-text-primary text-sm">View Original Contract</span>
+          </span>
+          <span className="text-xs text-text-muted font-mono">{isPDFOpen ? '[ COLLAPSE ]' : '[ EXPAND ]'}</span>
+        </Button>
+
+        {isPDFOpen && (
+          <div className="mt-4 border border-border-default rounded-md overflow-hidden bg-bg-surface h-[70vh] animate-in slide-in-from-top-4 duration-base">
+            {isPDFLoading ? (
+              <div className="flex flex-col items-center justify-center h-full space-y-4">
+                <Loader2 className="w-8 h-8 animate-spin text-accent" />
+                <p className="text-text-secondary text-sm font-semibold">Loading contract PDF...</p>
+              </div>
+            ) : pdfError || !pdfUrl ? (
+              <div className="flex items-center justify-center h-full text-text-muted text-sm font-medium">
+                {pdfError || 'Original PDF document not available'}
+              </div>
+            ) : (
+              <iframe src={pdfUrl} className="w-full h-full border-none" title="Contract PDF" />
+            )}
           </div>
         )}
       </div>

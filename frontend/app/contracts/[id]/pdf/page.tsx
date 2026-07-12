@@ -4,10 +4,14 @@ import { useEffect, useState, use } from 'react';
 import { useAuth } from '../../../../context/AuthContext';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import Button from '../../../../components/Button';
+import { Card, CardBody } from '../../../../components/Card';
+import { useToast } from '../../../../context/ToastContext';
 
 export default function ContractPDFPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { token } = useAuth();
+  const { showToast } = useToast();
   
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,6 +39,7 @@ export default function ContractPDFPage({ params }: { params: Promise<{ id: stri
         setPdfUrl(objectUrl);
       } catch (err: any) {
         setError(err.message || 'Failed to load PDF');
+        showToast('Failed to load contract PDF', 'error');
       } finally {
         setIsLoading(false);
       }
@@ -45,13 +50,13 @@ export default function ContractPDFPage({ params }: { params: Promise<{ id: stri
     return () => {
       if (objectUrl) window.URL.revokeObjectURL(objectUrl);
     };
-  }, [id, token]);
+  }, [id, token, showToast]);
 
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-        <Loader2 className="w-8 h-8 animate-spin text-accent-500" />
-        <p className="text-gray-500 font-medium">Loading contract view...</p>
+        <Loader2 className="w-8 h-8 animate-spin text-accent" />
+        <p className="text-text-secondary text-sm font-semibold">Loading contract view...</p>
       </div>
     );
   }
@@ -59,28 +64,34 @@ export default function ContractPDFPage({ params }: { params: Promise<{ id: stri
   if (error || !pdfUrl) {
     return (
       <div className="flex justify-center items-center min-h-[60vh] max-w-4xl mx-auto">
-        <div className="glass-surface p-12 rounded-3xl text-center w-full">
-          <h2 className="text-xl font-bold mb-4">{error || 'PDF not available'}</h2>
-          <Link href={`/contracts/${id}`} className="text-accent-500 font-medium hover:underline flex items-center justify-center gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Contract
-          </Link>
-        </div>
+        <Card variant="default" className="p-12 text-center w-full">
+          <CardBody className="flex flex-col items-center">
+            <h2 className="text-xl font-bold mb-4 text-text-primary">{error || 'PDF not available'}</h2>
+            <Link href={`/contracts/${id}`}>
+              <Button variant="primary" className="flex items-center gap-1.5">
+                <ArrowLeft className="w-4 h-4" />
+                Back to Contract
+              </Button>
+            </Link>
+          </CardBody>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-[85vh] max-w-5xl mx-auto">
-      <div className="mb-4">
-        <Link href={`/contracts/${id}`} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-medium">
-          <ArrowLeft className="w-4 h-4 mr-1.5" />
-          Back to Contract
+    <div className="flex flex-col h-[85vh] max-w-5xl mx-auto space-y-4">
+      <div>
+        <Link href={`/contracts/${id}`}>
+          <Button variant="ghost" size="sm" className="flex items-center gap-1.5">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Contract
+          </Button>
         </Link>
       </div>
       
-      <div className="glass-surface rounded-3xl overflow-hidden flex-1 border border-gray-200 dark:border-gray-800">
-        <iframe src={pdfUrl} className="w-full h-full" title="Contract PDF" />
+      <div className="border border-border-default rounded-md overflow-hidden flex-1 bg-bg-surface">
+        <iframe src={pdfUrl} className="w-full h-full border-none" title="Contract PDF" />
       </div>
     </div>
   );

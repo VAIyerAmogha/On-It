@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, Send, X, AlertCircle } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 
@@ -89,50 +89,51 @@ export default function ContractQA({ contractId, isOpen, onClose }: ContractQAPr
     <>
       {/* Backdrop overlay */}
       <div 
-        className="fixed inset-0 bg-black/20 dark:bg-black/40 backdrop-blur-sm z-40 transition-opacity"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity animate-in fade-in duration-base"
         onClick={onClose}
       />
       
       {/* Drawer */}
-      <div className="fixed inset-y-0 right-0 w-full md:w-[400px] lg:w-[450px] glass-surface border-l z-50 flex flex-col shadow-2xl animate-in slide-in-from-right duration-300">
-        <div className="h-16 px-6 flex items-center justify-between border-b border-gray-200/50 dark:border-gray-800/50">
-          <div className="flex items-center gap-2 text-accent-600 dark:text-accent-400">
-            <Sparkles className="w-5 h-5" />
-            <h2 className="font-semibold">Contract AI</h2>
+      <div className="fixed inset-y-0 right-0 w-full md:w-[400px] lg:w-[450px] bg-bg-surface/95 border-l border-border-default z-50 flex flex-col shadow-modal animate-in slide-in-from-right duration-base ease-spring">
+        <div className="h-16 px-6 flex items-center justify-between border-b border-border-subtle shrink-0">
+          <div className="flex items-center gap-2 text-accent">
+            <Sparkles className="w-5 h-5" strokeWidth={1.5} />
+            <h2 className="font-semibold text-text-primary text-base">Contract AI</h2>
           </div>
           <button 
             onClick={onClose}
-            className="p-2 -mr-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="p-2 -mr-2 text-text-secondary hover:text-text-primary transition-colors rounded-full hover:bg-bg-elevated cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 flex flex-col bg-white/30 dark:bg-black/10">
+        {/* Message Thread */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 flex flex-col bg-bg-base/30">
           {messages.map((msg) => (
             <div 
               key={msg.id} 
               className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start gap-3'}`}
             >
               {msg.role === 'ai' && (
-                <div className="w-8 h-8 rounded-full bg-accent-500/10 flex items-center justify-center shrink-0 text-accent-600 dark:text-accent-400 mt-1">
-                  <Sparkles className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-md bg-accent-subtle border border-accent/20 flex items-center justify-center shrink-0 text-accent mt-0.5">
+                  <Sparkles className="w-4 h-4" strokeWidth={1.5} />
                 </div>
               )}
               
               <div 
-                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                className={`max-w-[85%] rounded-md px-4 py-3 text-sm leading-relaxed ${
                   msg.role === 'user' 
-                    ? 'bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-tr-sm' 
+                    ? 'bg-accent text-text-inverse font-medium' 
                     : msg.isLowFaithfulness 
-                      ? 'bg-amber-500/5 border border-amber-500/20 text-gray-800 dark:text-gray-200 rounded-tl-sm shadow-sm'
-                      : 'bg-accent-500/5 border border-accent-500/20 text-gray-800 dark:text-gray-200 rounded-tl-sm shadow-sm'
+                      ? 'bg-warning/5 border border-warning/30 text-text-primary'
+                      : 'bg-bg-elevated border border-border-subtle text-text-primary'
                 }`}
               >
                 <div className="whitespace-pre-wrap">{msg.text}</div>
                 {msg.isLowFaithfulness && (
-                  <div className="mt-3 pt-3 border-t border-amber-500/20 text-xs text-amber-600 dark:text-amber-500 flex items-center gap-1.5 font-medium">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
+                  <div className="mt-3 pt-3 border-t border-warning/20 text-xs text-warning flex items-center gap-1.5 font-medium">
+                    <AlertCircle className="w-4 h-4 shrink-0" strokeWidth={1.5} />
                     Couldn't explicitly verify this from the document.
                   </div>
                 )}
@@ -142,35 +143,36 @@ export default function ContractQA({ contractId, isOpen, onClose }: ContractQAPr
           
           {isThinking && (
             <div className="flex justify-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-accent-500/10 flex items-center justify-center shrink-0 text-accent-600 dark:text-accent-400 mt-1">
-                <Sparkles className="w-4 h-4" />
+              <div className="w-8 h-8 rounded-md bg-accent-subtle border border-accent/20 flex items-center justify-center shrink-0 text-accent mt-0.5">
+                <Sparkles className="w-4 h-4" strokeWidth={1.5} />
               </div>
-              <div className="bg-accent-500/5 border border-accent-500/20 rounded-2xl rounded-tl-sm px-5 py-4 flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-accent-500/60 animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-2 h-2 rounded-full bg-accent-500/60 animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-2 h-2 rounded-full bg-accent-500/60 animate-bounce" style={{ animationDelay: '300ms' }} />
+              <div className="bg-bg-elevated border border-border-subtle rounded-md px-4 py-3 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           )}
           <div ref={messagesEndRef} className="h-4" />
         </div>
 
-        <div className="p-4 border-t border-gray-200/50 dark:border-gray-800/50 bg-white/50 dark:bg-black/50 backdrop-blur-md">
+        {/* Input box */}
+        <div className="p-4 border-t border-border-subtle bg-bg-surface shrink-0">
           <form onSubmit={handleSubmit} className="relative">
             <input
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Ask a question..."
-              className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-full pl-5 pr-12 py-3 text-sm focus:outline-none focus:border-accent-500 focus:ring-1 focus:ring-accent-500 transition-shadow"
+              placeholder="Ask a question about this contract..."
+              className="w-full bg-bg-base border border-border-default rounded-md pl-4 pr-12 py-3 text-sm focus:outline-none focus:border-accent focus:shadow-accent transition-all text-text-primary placeholder:text-text-muted"
               disabled={isThinking}
             />
             <button 
               type="submit"
               disabled={!inputValue.trim() || isThinking}
-              className="absolute right-2 top-1.5 bottom-1.5 w-9 flex items-center justify-center bg-accent-500 hover:bg-accent-600 text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="absolute right-2 top-2 bottom-2 w-8 flex items-center justify-center bg-accent hover:brightness-105 active:scale-[0.98] text-text-inverse rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >
-              <Send className="w-4 h-4 -ml-0.5" />
+              <Send className="w-4 h-4" strokeWidth={1.5} />
             </button>
           </form>
         </div>

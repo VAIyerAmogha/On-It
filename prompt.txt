@@ -1,56 +1,337 @@
 Refer CLAUDE.md and Plan.md. 
 
-Modify the Dashboard notification panel built in the dashboard notification
-system feature. Add rendering for the three new notification types
-alongside the existing four. Follow the locked design system throughout.
+TA pure color system replacement. No layout changes, no component restructuring,
+no new features, no functionality changes. Only colors, gradients derived from
+those colors, and the tokens that reference them. Every other visual decision
+stays exactly as it is.
 
-1. MISSED_DELIVERY row:
-   - Left: Lucide `XCircle` icon in muted red (this IS the most urgent
-     state — slightly stronger visual than amber, still not harsh).
-     "{contract_title} — Milestone {milestone_number}" bold,
-     "{client_name}" muted below.
-   - Center: "Delivery missed by {days_overdue} days — not yet triggered"
-     with trigger_date shown as human-readable date in muted text below.
-   - Right: "Mark as Triggered" button (calls existing
-     PATCH /api/milestones/{id}/trigger, removes row on success) and
-     "Missed Deadline Invoice" button (navigates to the contract detail
-     page with the milestone pre-scrolled into view, where the user can
-     use the Missed Deadline flow from Feature 1 — do not inline the
-     discount modal here, just navigate). And "View" button.
 
-2. UPCOMING_DEADLINE row:
-   - Left: Lucide `CalendarClock` icon in muted violet.
-     "{contract_title} — Milestone {milestone_number}" bold,
-     "{client_name}" muted.
-   - Center: "Due in {days_until_deadline} days —
-     {deliverable_description truncated to 60 chars}" with trigger_date
-     as human-readable date in muted text.
-   - Right: "View" button only.
+The new palette
 
-3. UNINVOICED_TRIGGERED row:
-   - Left: Lucide `FileWarning` icon in muted amber.
-     "{contract_title} — Milestone {milestone_number}" bold,
-     "{client_name}" muted.
-   - Center: "Triggered — deadline passed {days_since_triggered} days ago,
-     invoice not raised"
-   - Right: "Generate Invoice" button (calls existing
-     POST /api/milestones/{id}/invoice inline, removes row on success)
-     and "View" button.
+Background (60%):
+  --color-bg-base:        #FAFAF9   /* Stone White — primary page background */
+  --color-bg-surface:     #F5F4F2   /* slightly deeper stone — card surfaces */
+  --color-bg-elevated:    #EEECEA   /* elevated surfaces, hover states */
+  --color-bg-overlay:     #E8E6E3   /* modals, dropdowns, popovers */
 
-4. Update the panel header count to include the new types in the total.
+Primary brand surfaces (30%):
+  --color-brand-deep:     #1C1917   /* Stone 900 — sidebar, headers, dark cards */
+  --color-brand-mid:      #292524   /* Stone 800 — layered dark surfaces */
+  --color-brand-soft:     #44403C   /* Stone 700 — secondary dark elements */
+  --color-brand-muted:    #78716C   /* Stone 500 — muted dark text on light bg */
 
-5. Update the sort order rendering to match the backend sort:
-   MISSED_DELIVERY → OVERDUE_PAYMENT → PAYMENT_DUE_SOON →
-   UNINVOICED_TRIGGERED → UPCOMING_DEADLINE → UNINVOICED_MILESTONE.
-   The frontend must not re-sort — render in the order the backend returns.
+Accent (10%):
+  --color-accent:         #F59E0B   /* Warm Gold — CTAs, active states, key metrics */
+  --color-accent-hover:   #D97706   /* Amber 600 — accent hover */
+  --color-accent-subtle:  #FEF3C7   /* Amber 50 — accent tint backgrounds */
+  --color-accent-muted:   #78350F   /* Deep Amber — hover states, active nav only */
 
-6. No new global state. Extend the existing local state in the dashboard
-   component to handle loading/error states for the new inline action
-   buttons ("Mark as Triggered" on MISSED_DELIVERY rows,
-   "Generate Invoice" on UNINVOICED_TRIGGERED rows) using the same
-   per-row loading state pattern already established.
+Text:
+  --color-text-primary:   #1C1917   /* on light surfaces */
+  --color-text-secondary: #44403C   /* supporting text on light surfaces */
+  --color-text-muted:     #78716C   /* timestamps, placeholders on light surfaces */
+  --color-text-inverse:   #FAFAF9   /* on dark/brand surfaces */
+  --color-text-inverse-secondary: #A8A29E  /* secondary text on dark surfaces */
+  --color-text-accent:    #F59E0B   /* accent-colored text */
 
-no need to run any tests
+Borders:
+  --color-border-subtle:  #E7E5E4   /* dividers on light surfaces */
+  --color-border-default: #D6D3D1   /* card borders, input borders */
+  --color-border-strong:  #A8A29E   /* focused states, strong dividers */
+  --color-border-dark:    #292524   /* borders on dark surfaces */
+  --color-border-accent:  #F59E0B   /* focus rings, active borders */
+
+Status colors (unchanged — these are semantic, not brand):
+  --color-success:        #16A34A
+  --color-success-subtle: #DCFCE7
+  --color-warning:        #D97706
+  --color-warning-subtle: #FEF3C7
+  --color-danger:         #DC2626
+  --color-danger-subtle:  #FEE2E2
+  --color-info:           #2563EB
+  --color-info-subtle:    #DBEAFE
+
+Milestone status:
+  --color-status-pending:   #78716C
+  --color-status-triggered: #D97706
+  --color-status-invoiced:  #2563EB
+  --color-status-paid:      #16A34A
+  --color-status-overdue:   #DC2626
+
+
+Gradients
+
+Use these exact gradient definitions. Do not invent new gradients.
+Apply them only where a gradient genuinely improves the surface —
+not as decoration.
+
+css/* Hero / landing page background wash — light */
+--gradient-hero: linear-gradient(
+  135deg,
+  #FAFAF9 0%,
+  #FEF3C7 50%,
+  #FAFAF9 100%
+);
+
+/* Dark surface gradient — sidebar, dark cards */
+--gradient-dark: linear-gradient(
+  180deg,
+  #1C1917 0%,
+  #292524 100%
+);
+
+/* Accent gradient — primary buttons, key CTAs */
+--gradient-accent: linear-gradient(
+  135deg,
+  #F59E0B 0%,
+  #D97706 100%
+);
+
+/* Accent subtle — tinted backgrounds behind accent elements */
+--gradient-accent-subtle: linear-gradient(
+  135deg,
+  #FEF3C7 0%,
+  #FDE68A 100%
+);
+
+/* Card surface — adds very slight warmth depth to flat cards */
+--gradient-surface: linear-gradient(
+  180deg,
+  #F5F4F2 0%,
+  #EEECEA 100%
+);
+
+/* Dark card — for any card placed on the dark sidebar/brand surface */
+--gradient-dark-card: linear-gradient(
+  180deg,
+  #292524 0%,
+  #1C1917 100%
+);
+
+/* Stat card accent highlight — top border glow on key metric cards */
+--gradient-stat-accent: linear-gradient(
+  90deg,
+  #F59E0B 0%,
+  #78350F 100%
+);
+
+
+Where each color and gradient applies
+
+Follow this mapping exactly. Do not make judgment calls — apply the
+token that is specified here for each element.
+
+Page backgrounds:
+
+
+Every page body: --color-bg-base (#FAFAF9)
+No page should have a dark background except the landing page hero section
+
+
+Sidebar / left navigation:
+
+
+Background: --gradient-dark
+All nav item text: --color-text-inverse
+Secondary nav text / metadata: --color-text-inverse-secondary
+Active nav item: left border 2px --color-accent, text --color-accent,
+background rgba(245,158,11,0.08)
+Hover nav item: background --color-brand-mid, text --color-text-inverse
+App logo / wordmark: --color-accent
+Bottom user section (name, email): --color-text-inverse and
+--color-text-inverse-secondary
+Sidebar border-right: --color-border-dark
+
+
+Top header bar (if present):
+
+
+Background: --color-bg-base with bottom border --color-border-subtle
+Text: --color-text-primary
+
+
+Cards (light surface, placed on stone white page):
+
+
+Background: --gradient-surface
+Border: --color-border-default
+Title text: --color-text-primary
+Supporting text: --color-text-secondary
+Metadata / captions: --color-text-muted
+Hover state: background --color-bg-elevated, border --color-border-strong
+
+
+Stat / metric cards on dashboard:
+
+
+Background: --gradient-surface
+Border: --color-border-default
+Top border accent stripe (3px, applied only to the "key" stat card —
+e.g. Paid This Month): --gradient-stat-accent
+Number value: --color-text-primary, font-mono
+Accent metric value (e.g. paid amount): --color-accent
+Label: --color-text-muted
+
+
+Buttons:
+
+
+Primary: background --gradient-accent, text --color-bg-base,
+hover background --color-accent-hover
+Secondary: background transparent, border --color-border-default,
+text --color-text-primary, hover background --color-bg-elevated
+Ghost: no background, no border, text --color-text-secondary,
+hover text --color-text-primary, hover background --color-bg-elevated
+Danger: background --color-danger-subtle, text --color-danger,
+border --color-danger, hover background #FECACA
+Disabled (all variants): opacity 0.4
+
+
+Inputs / Textareas:
+
+
+Background: #FFFFFF (pure white — lifts the input off the stone surface)
+Border: --color-border-default
+Focus border: --color-border-accent
+Focus shadow: 0 0 0 3px rgba(245,158,11,0.15)
+Label text: --color-text-primary
+Placeholder: --color-text-muted
+Error border: --color-danger
+
+
+Status badges:
+
+
+PENDING: bg #F5F5F4, text --color-status-pending
+TRIGGERED: bg --color-warning-subtle, text --color-warning
+INVOICED: bg --color-info-subtle, text --color-status-invoiced
+PAID: bg --color-success-subtle, text --color-status-paid
+OVERDUE: bg --color-danger-subtle, text --color-status-overdue
+
+
+Modals:
+
+
+Backdrop: rgba(28,25,23,0.6) (brand deep at 60% opacity)
+Modal surface: #FFFFFF
+Border: --color-border-default
+Header border-bottom: --color-border-subtle
+Footer border-top: --color-border-subtle
+Title: --color-text-primary
+
+
+Tables:
+
+
+Header row bg: --color-bg-elevated
+Header text: --color-text-muted, text-xs uppercase tracking-wider
+Body row hover: --color-bg-elevated
+Row border: --color-border-subtle
+Cell text: --color-text-primary
+Secondary cell text: --color-text-secondary
+Amount cells: --color-text-primary, font-mono
+
+
+Landing page hero:
+
+
+Background: --gradient-hero
+Headline: --color-text-primary
+Subtext: --color-text-secondary
+Primary CTA button: --gradient-accent
+Secondary CTA button: secondary button style (see Buttons above)
+"How it works" and feature cards: standard card style on stone white
+
+
+Notification panel rows (left border colors):
+
+
+MISSED_DELIVERY: --color-danger
+OVERDUE_PAYMENT: --color-warning
+PAYMENT_DUE_SOON: --color-warning
+UNINVOICED_TRIGGERED: --color-accent
+UPCOMING_DEADLINE: --color-info
+UNINVOICED_MILESTONE: --color-brand-muted
+Panel background: --gradient-surface
+Panel border: --color-border-default
+
+
+Contract QA chat:
+
+
+User message bubble: --color-brand-deep, text --color-text-inverse
+AI message bubble: --color-bg-elevated, text --color-text-primary
+Low-faithfulness AI message: left border 2px --color-warning,
+bg --color-warning-subtle
+Input field: standard input style
+
+
+Invoice detail — delivery_missed badge:
+
+
+Background: --color-warning-subtle
+Text: --color-warning
+Border: --color-warning
+
+
+Progress bar (milestone completion on dashboard cards):
+
+
+Track: --color-bg-elevated
+Fill: --gradient-accent
+
+
+Skeleton loaders:
+
+
+Base: --color-bg-elevated
+Shimmer highlight: --color-bg-surface
+Animation: standard shimmer keyframe, no color changes
+
+
+Focus rings (all interactive elements):
+
+
+0 0 0 3px rgba(245,158,11,0.20)
+Never use browser default blue focus ring anywhere
+
+
+
+Implementation instructions
+
+
+Find every place in the codebase where a color is defined — the existing
+Tailwind config custom theme, any CSS variables file, any globals.css
+tokens, any hardcoded Tailwind color classes that reference the old
+palette (violet, graphite, the old dark grays). Replace all of them
+with the new tokens defined above.
+Update tailwind.config.js to map every new token into the Tailwind
+theme so they can be used as utility classes
+(e.g. bg-brand-deep, text-accent, border-accent).
+Do not change any layout, spacing, component structure, font sizes,
+border radii, shadows, animations, or any non-color property. If a
+line of code has both a color class and a layout class, change only
+the color class.
+Apply the gradient tokens as inline styles or CSS custom property
+references where Tailwind's bg-gradient-to-* utilities are
+insufficient for the exact gradient defined above.
+After replacing all tokens, do a search across the entire codebase for:
+
+Any remaining hex color values hardcoded in JSX or CSS
+Any remaining references to the old color names (violet, graphite,
+purple, the old dark theme grays like #0a0a0a, #111111, #1a1a1a)
+Any Tailwind classes referencing violet-, purple-, gray-* used
+as brand colors (gray used for neutral utility — e.g. text-gray-500
+as a one-off — is acceptable only if no token covers that use case)
+Replace every instance found with the correct new token.
+
+
+
+Verify the app loads and every page renders without visual breakage
+after the token replacement. No layout shifts, no missing backgrounds,
+no invisible text (white on white or black on black).
+Do not add, remove, or modify any component logic, API calls, state,
+props, or routing. This is a color-only change.
 
 
 log updates CLAUDE.md and Plan.md with the exisiting format

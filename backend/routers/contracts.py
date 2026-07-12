@@ -196,23 +196,46 @@ async def delete_contract(id: str, freelancer_id: str = Depends(get_current_user
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
     
-    db.contracts.delete_one({"_id": ObjectId(id), "freelancer_id": freelancer_id})
+    # Import delete_pdf helper dynamically to handle local vs root module path issues
+    try:
+        from lib.storage import delete_pdf
+    except ImportError:
+        from backend.lib.storage import delete_pdf
+
+    # 1. Fetch all invoices associated with the contract to delete their PDFs & followup logs
+    invoices = list(db.invoices.find({"contract_id": id, "freelancer_id": freelancer_id}))
+    for invoice in invoices:
+        pdf_file_id = invoice.get("pdf_file_id")
+        if pdf_file_id:
+            try:
+                delete_pdf(db, pdf_file_id, bucket_name="invoices")
+            except Exception:
+                pass
+        
+        # Delete followup logs for this invoice
+        db.followup_logs.delete_many({"invoice_id": str(invoice["_id"])})
+
+    # 2. Delete all invoices from database
+    db.invoices.delete_many({"contract_id": id, "freelancer_id": freelancer_id})
     
-    # Delete associated milestones and invoices
+    # 3. Delete all milestones from database
     db.milestones.delete_many({"contract_id": id, "freelancer_id": freelancer_id})
     
-    # Delete raw contract PDF from GridFS
+    # 4. Delete all contract chunks (RAG index) from database
+    db.contract_chunks.delete_many({"contract_id": id, "freelancer_id": freelancer_id})
+    
+    # 5. Delete raw contract PDF from GridFS
     if contract.get("file_url"):
         try:
-            try:
-                from lib.storage import delete_pdf
-            except ImportError:
-                from backend.lib.storage import delete_pdf
             delete_pdf(db, contract["file_url"], bucket_name="contracts")
         except Exception:
             pass
             
+    # 6. Delete the contract document itself
+    db.contracts.delete_one({"_id": ObjectId(id), "freelancer_id": freelancer_id})
+            
     return {"message": "Contract deleted successfully"}
+
 
 from fastapi.responses import Response
 

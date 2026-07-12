@@ -1,0 +1,174 @@
+:root {
+  --color-bg-base: #FAFAF9;
+  --color-bg-surface: #F5F4F2;
+  --color-bg-elevated: #EEECEA;
+  --color-bg-overlay: #E8E6E3;
+
+  --color-brand-deep: #1C1917;
+  --color-brand-mid: #292524;
+  --color-brand-soft: #44403C;
+  --color-brand-muted: #78716C;
+
+  --color-accent: #F59E0B;
+  --color-accent-hover: #D97706;
+  --color-accent-subtle: #FEF3C7;
+  --color-accent-muted: #78350F;
+
+  --color-text-primary: #1C1917;
+  --color-text-secondary: #44403C;
+  --color-text-muted: #78716C;
+  --color-text-inverse: #FAFAF9;
+  --color-text-inverse-secondary: #A8A29E;
+  --color-text-accent: #F59E0B;
+
+  --color-border-subtle: #E7E5E4;
+  --color-border-default: #D6D3D1;
+  --color-border-strong: #A8A29E;
+  --color-border-dark: #292524;
+  --color-border-accent: #F59E0B;
+
+  --color-success: #16A34A;
+  --color-success-subtle: #DCFCE7;
+  --color-warning: #D97706;
+  --color-warning-subtle: #FEF3C7;
+  --color-danger: #DC2626;
+  --color-danger-subtle: #FEE2E2;
+  --color-info: #2563EB;
+  --color-info-subtle: #DBEAFE;
+
+  --color-status-pending: #78716C;
+  --color-status-triggered: #D97706;
+  --color-status-invoiced: #2563EB;
+  --color-status-paid: #16A34A;
+  --color-status-overdue: #DC2626;
+
+  /* Gradients */
+  --gradient-hero: linear-gradient(135deg, #FAFAF9 0%, #FEF3C7 50%, #FAFAF9 100%);
+  --gradient-dark: linear-gradient(180deg, #1C1917 0%, #292524 100%);
+  --gradient-accent: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  --gradient-accent-subtle: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+  --gradient-surface: linear-gradient(180deg, #F5F4F2 0%, #EEECEA 100%);
+  --gradient-dark-card: linear-gradient(180deg, #292524 0%, #1C1917 100%);
+  --gradient-stat-accent: linear-gradient(90deg, #F59E0B 0%, #78350F 100%);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-elevated: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+  --shadow-modal: 0 24px 48px rgba(0, 0, 0, 0.15);
+  --shadow-accent: 0 0 0 3px rgba(245, 158, 11, 0.2);
+
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 350ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-enter: cubic-bezier(0.0, 0.0, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0.0, 1, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@theme {
+  --color-bg-base: var(--color-bg-base);
+  --color-bg-surface: var(--color-bg-surface);
+  --color-bg-elevated: var(--color-bg-elevated);
+  --color-bg-overlay: var(--color-bg-overlay);
+
+  --color-brand-deep: var(--color-brand-deep);
+  --color-brand-mid: var(--color-brand-mid);
+  --color-brand-soft: var(--color-brand-soft);
+  --color-brand-muted: var(--color-brand-muted);
+
+  --color-accent: var(--color-accent);
+  --color-accent-hover: var(--color-accent-hover);
+  --color-accent-subtle: var(--color-accent-subtle);
+  --color-accent-muted: var(--color-accent-muted);
+
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-inverse: var(--color-text-inverse);
+  --color-text-inverse-secondary: var(--color-text-inverse-secondary);
+  --color-text-accent: var(--color-text-accent);
+
+  --color-border-subtle: var(--color-border-subtle);
+  --color-border-default: var(--color-border-default);
+  --color-border-strong: var(--color-border-strong);
+  --color-border-dark: var(--color-border-dark);
+  --color-border-accent: var(--color-border-accent);
+
+  --color-success: var(--color-success);
+  --color-success-subtle: var(--color-success-subtle);
+  --color-warning: var(--color-warning);
+  --color-warning-subtle: var(--color-warning-subtle);
+  --color-danger: var(--color-danger);
+  --color-danger-subtle: var(--color-danger-subtle);
+  --color-info: var(--color-info);
+  --color-info-subtle: var(--color-info-subtle);
+
+  --color-status-pending: var(--color-status-pending);
+  --color-status-triggered: var(--color-status-triggered);
+  --color-status-invoiced: var(--color-status-invoiced);
+  --color-status-paid: var(--color-status-paid);
+  --color-status-overdue: var(--color-status-overdue);
+
+  /* Background image/gradients mapping */
+  --background-image-gradient-hero: var(--gradient-hero);
+  --background-image-gradient-dark: var(--gradient-dark);
+  --background-image-gradient-accent: var(--gradient-accent);
+  --background-image-gradient-accent-subtle: var(--gradient-accent-subtle);
+  --background-image-gradient-surface: var(--gradient-surface);
+  --background-image-gradient-dark-card: var(--gradient-dark-card);
+  --background-image-gradient-stat-accent: var(--gradient-stat-accent);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-full: var(--radius-full);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-elevated: var(--shadow-elevated);
+  --shadow-modal: var(--shadow-modal);
+  --shadow-accent: var(--shadow-accent);
+
+  --transition-duration-fast: var(--duration-fast);
+  --transition-duration-base: var(--duration-base);
+  --transition-duration-slow: var(--duration-slow);
+  
+  --transition-timing-function-standard: var(--ease-standard);
+  --transition-timing-function-enter: var(--ease-enter);
+  --transition-timing-function-exit: var(--ease-exit);
+  --transition-timing-function-spring: var(--ease-spring);
+}
+
+.glass {
+  background: var(--gradient-surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-elevated) 25%,
+    var(--color-bg-surface) 50%,
+    var(--color-bg-elevated) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+}

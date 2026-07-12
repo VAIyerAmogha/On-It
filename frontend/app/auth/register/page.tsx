@@ -3,12 +3,18 @@
 import { useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import Link from 'next/link';
-import { Loader2, Mail } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import { resendVerificationEmail } from '../../../lib/api';
+import Button from '../../../components/Button';
+import { Input } from '../../../components/Input';
+import { Card, CardBody } from '../../../components/Card';
+import { useToast } from '../../../context/ToastContext';
 
 export default function RegisterPage() {
   const { register, googleLogin } = useAuth();
+  const { showToast } = useToast();
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,8 +30,10 @@ export default function RegisterPage() {
     try {
       await register(email, password, name);
       setIsSuccess(true);
+      showToast('Registration successful! Please check your email.', 'success');
     } catch (err: any) {
       setError(err.message || 'Failed to register');
+      showToast(err.message || 'Failed to register', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -36,6 +44,7 @@ export default function RegisterPage() {
     try {
       await resendVerificationEmail(email);
       setResendStatus('sent');
+      showToast('Verification email resent', 'success');
       setTimeout(() => setResendStatus('idle'), 5000);
     } catch (err) {
       setResendStatus('sent');
@@ -47,116 +56,125 @@ export default function RegisterPage() {
     try {
       if (credentialResponse.credential) {
         await googleLogin(credentialResponse.credential);
+        showToast('Registered with Google', 'success');
       }
     } catch (err: any) {
       setError(err.message || 'Google sign in failed');
+      showToast(err.message || 'Google sign in failed', 'error');
     }
   };
 
   if (isSuccess) {
     return (
-      <div className="glass-surface p-8 rounded-2xl w-full max-w-md mx-auto flex flex-col items-center">
-        <div className="w-16 h-16 bg-accent-500/10 rounded-full flex items-center justify-center mb-6">
-          <Mail className="w-8 h-8 text-accent-500" />
-        </div>
-        <h1 className="text-2xl font-bold text-center mb-2">Check your inbox</h1>
-        <p className="text-gray-500 text-center mb-8">
-          We've sent a verification link to <strong>{email}</strong>. Please click the link to verify your account.
-        </p>
+      <Card variant="glass" className="w-full max-w-md mx-auto">
+        <CardBody className="flex flex-col items-center p-8">
+          <div className="w-16 h-16 bg-accent-subtle border border-accent/20 rounded-full flex items-center justify-center mb-6 text-accent">
+            <Mail className="w-8 h-8" strokeWidth={1.5} />
+          </div>
+          <h1 className="text-2xl font-bold text-center text-text-primary mb-2">Check your inbox</h1>
+          <p className="text-text-secondary text-sm text-center mb-8">
+            We've sent a verification link to <strong className="text-text-primary font-medium">{email}</strong>. Please click the link to verify your account.
+          </p>
 
-        <button
-          onClick={handleResend}
-          disabled={resendStatus !== 'idle'}
-          className="text-sm font-medium text-accent-600 dark:text-accent-400 hover:underline transition-colors disabled:no-underline disabled:opacity-70"
-        >
-          {resendStatus === 'loading' ? 'Sending...' : resendStatus === 'sent' ? 'Verification email sent!' : 'Resend verification email'}
-        </button>
+          <Button
+            variant="ghost"
+            onClick={handleResend}
+            disabled={resendStatus !== 'idle'}
+            className="mb-8 w-full"
+          >
+            {resendStatus === 'loading'
+              ? 'Sending...'
+              : resendStatus === 'sent'
+              ? 'Verification email sent!'
+              : 'Resend verification email'}
+          </Button>
 
-        <div className="mt-8">
-          <Link href="/auth/login" className="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-medium py-2.5 px-6 rounded-lg transition-colors">
-            Go to Login
-          </Link>
-        </div>
-      </div>
+          <div className="w-full">
+            <Link href="/auth/login" className="block w-full">
+              <Button variant="secondary" className="w-full">
+                Go to Login
+              </Button>
+            </Link>
+          </div>
+        </CardBody>
+      </Card>
     );
   }
 
   return (
-    <div className="glass-surface p-8 rounded-2xl w-full max-w-md mx-auto">
-      <h1 className="text-2xl font-bold text-center mb-2">Create Account</h1>
-      <p className="text-gray-500 text-center mb-8">Join On-It to manage contracts</p>
+    <Card variant="glass" className="w-full max-w-md mx-auto">
+      <CardBody className="p-8">
+        <h1 className="text-2xl font-bold text-center text-text-primary mb-1">Create Account</h1>
+        <p className="text-text-secondary text-sm text-center mb-8">Join On-It to manage contracts</p>
 
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg text-sm mb-6">
-          {error}
-        </div>
-      )}
+        {error && (
+          <div className="bg-danger/10 border border-danger/20 text-danger p-3.5 rounded-md text-sm mb-6 font-medium">
+            {error}
+          </div>
+        )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label className="block text-sm font-medium mb-1.5">Name</label>
-          <input
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <Input
+            label="Name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            className="w-full px-4 py-2 bg-transparent border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:border-accent-500 transition-colors"
             placeholder="Jane Doe"
           />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1.5">Email</label>
-          <input
+          <Input
+            label="Email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full px-4 py-2 bg-transparent border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:border-accent-500 transition-colors"
             placeholder="you@example.com"
           />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1.5">Password</label>
-          <input
+          <Input
+            label="Password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="w-full px-4 py-2 bg-transparent border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:border-accent-500 transition-colors"
             placeholder="••••••••"
           />
+          <Button
+            type="submit"
+            variant="primary"
+            isLoading={isLoading}
+            className="w-full mt-2"
+          >
+            Sign Up
+          </Button>
+        </form>
+
+        <div className="mt-6 flex items-center justify-center space-x-4">
+          <div className="h-px bg-border-subtle w-full" />
+          <span className="text-text-muted text-xs whitespace-nowrap">or continue with</span>
+          <div className="h-px bg-border-subtle w-full" />
         </div>
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full bg-accent-500 hover:bg-accent-600 text-white font-medium py-2.5 rounded-lg transition-colors flex justify-center items-center gap-2 mt-4"
-        >
-          {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Sign Up'}
-        </button>
-      </form>
 
-      <div className="mt-6 flex items-center justify-center space-x-4">
-        <div className="h-px bg-gray-300 dark:bg-gray-700 w-full" />
-        <span className="text-gray-500 text-sm whitespace-nowrap">or continue with</span>
-        <div className="h-px bg-gray-300 dark:bg-gray-700 w-full" />
-      </div>
+        <div className="mt-6 flex justify-center">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => {
+              setError('Google sign in failed. Please try again.');
+              showToast('Google sign in failed', 'error');
+            }}
+            theme="outline"
+            size="large"
+            text="continue_with"
+            shape="rectangular"
+          />
+        </div>
 
-      <div className="mt-6 flex justify-center">
-        <GoogleLogin
-          onSuccess={handleGoogleSuccess}
-          onError={() => setError('Google sign in failed. Please try again.')}
-          theme="outline"
-          size="large"
-          text="continue_with"
-        />
-      </div>
-
-      <p className="text-center text-sm text-gray-500 mt-6">
-        Already have an account?{' '}
-        <Link href="/auth/login" className="text-accent-600 dark:text-accent-400 font-medium hover:underline">
-          Sign in
-        </Link>
-      </p>
-    </div>
+        <p className="text-center text-xs text-text-secondary mt-8">
+          Already have an account?{' '}
+          <Link href="/auth/login" className="text-accent font-semibold hover:underline">
+            Sign in
+          </Link>
+        </p>
+      </CardBody>
+    </Card>
   );
 }

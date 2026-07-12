@@ -6,6 +6,12 @@ import { useAuth } from '../../../context/AuthContext';
 import { ArrowLeft, Download, FileText, Loader2, Calendar, IndianRupee, Send, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import InvoicePreview from '../../../components/InvoicePreview';
+import Button from '../../../components/Button';
+import { Card, CardBody } from '../../../components/Card';
+import Modal from '../../../components/Modal';
+import { Input, Textarea } from '../../../components/Input';
+import Skeleton from '../../../components/Skeleton';
+import { useToast } from '../../../context/ToastContext';
 
 interface Invoice {
   _id: string;
@@ -28,6 +34,7 @@ interface Invoice {
 export default function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { token } = useAuth();
+  const { showToast } = useToast();
   
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,11 +50,9 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState('');
-  const [sendSuccess, setSendSuccess] = useState(false);
 
   const handleOpenEmailModal = async () => {
     setSendError('');
-    setSendSuccess(false);
     setIsEmailModalOpen(true);
     setIsPreviewLoading(true);
     try {
@@ -57,6 +62,7 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
       setEmailBody(preview.body);
     } catch (err: any) {
       setSendError(err.message || 'Failed to load email preview');
+      showToast('Failed to load email preview', 'error');
     } finally {
       setIsPreviewLoading(false);
     }
@@ -72,10 +78,10 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
       });
       setInvoice(prev => prev ? { ...prev, sent_at: res.sent_at } : null);
       setIsEmailModalOpen(false);
-      setSendSuccess(true);
-      setTimeout(() => setSendSuccess(false), 5000);
+      showToast('Invoice sent successfully to client', 'success');
     } catch (err: any) {
       setSendError(err.message || 'Failed to send email');
+      showToast(err.message || 'Failed to send email', 'error');
     } finally {
       setIsSending(false);
     }
@@ -121,8 +127,9 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
       a.click();
       window.URL.revokeObjectURL(url);
       a.remove();
+      showToast('Invoice PDF downloaded', 'success');
     } catch (err: any) {
-      alert(err.message || 'Failed to download invoice');
+      showToast(err.message || 'Failed to download invoice', 'error');
     } finally {
       setIsDownloading(false);
     }
@@ -132,12 +139,14 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto space-y-8 animate-pulse">
-        <div className="w-32 h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-        <div className="glass-surface p-12 rounded-3xl h-[60vh] flex flex-col justify-center items-center gap-6">
-          <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
-          <div className="w-48 h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
-        </div>
+      <div className="max-w-4xl mx-auto space-y-8">
+        <Skeleton variant="rect" className="h-6 w-32" />
+        <Card variant="default" className="h-96 flex flex-col justify-center items-center">
+          <CardBody className="space-y-4 flex flex-col items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-accent" />
+            <Skeleton variant="text" className="h-6 w-48" />
+          </CardBody>
+        </Card>
       </div>
     );
   }
@@ -145,205 +154,198 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
   if (error || !invoice) {
     return (
       <div className="flex justify-center items-center min-h-[60vh] max-w-4xl mx-auto">
-        <div className="glass-surface p-12 rounded-3xl text-center w-full">
-          <h2 className="text-xl font-bold mb-4">{error || 'Invoice not found'}</h2>
-          <Link href="/dashboard" className="text-accent-500 font-medium hover:underline flex items-center justify-center gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Dashboard
-          </Link>
-        </div>
+        <Card variant="default" className="p-12 text-center w-full">
+          <CardBody className="flex flex-col items-center">
+            <h2 className="text-xl font-bold mb-4 text-text-primary">{error || 'Invoice not found'}</h2>
+            <Link href="/dashboard">
+              <Button variant="primary" className="flex items-center gap-1.5">
+                <ArrowLeft className="w-4 h-4" />
+                Back to Dashboard
+              </Button>
+            </Link>
+          </CardBody>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
-      <Link href={`/contracts/${invoice.contract_id}`} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors font-medium">
-        <ArrowLeft className="w-4 h-4 mr-1.5" />
+      <Link href={`/contracts/${invoice.contract_id}`} className="inline-flex items-center text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors">
+        <ArrowLeft className="w-4 h-4 mr-1.5" strokeWidth={2} />
         Back to Contract
       </Link>
       
-      <div className="glass-surface p-12 rounded-3xl flex flex-col items-center justify-center text-center">
-        <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6 text-emerald-500">
-          <FileText className="w-10 h-10" />
-        </div>
-        
-        <h1 className="text-3xl font-bold mb-2">Invoice {invoice.invoice_number}</h1>
-        <p className="text-gray-500 mb-8 max-w-md">
-          This invoice has been successfully generated. You can download the PDF or send it to your client directly.
-        </p>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full max-w-2xl mb-10">
-          <div className="bg-black/5 dark:bg-white/5 p-4 rounded-2xl">
-            <Calendar className="w-5 h-5 text-gray-400 mb-2 mx-auto" />
-            <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Invoice Date</p>
-            <p className="font-medium">{invoice.invoice_date}</p>
+      <Card variant="default" className="p-8">
+        <CardBody className="flex flex-col items-center justify-center text-center">
+          <div className="w-16 h-16 bg-success/15 border border-success/30 rounded-md flex items-center justify-center mb-6 text-success">
+            <FileText className="w-8 h-8" strokeWidth={1.5} />
           </div>
-          <div className="bg-black/5 dark:bg-white/5 p-4 rounded-2xl">
-            <Calendar className="w-5 h-5 text-gray-400 mb-2 mx-auto" />
-            <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Due Date</p>
-            <p className="font-medium">{invoice.due_date}</p>
-          </div>
-          <div className="bg-emerald-500/10 p-4 rounded-2xl text-emerald-700 dark:text-emerald-400 flex flex-col justify-center items-center">
-            <IndianRupee className="w-5 h-5 mb-2 mx-auto" />
-            <p className="text-xs text-center uppercase font-semibold mb-1">Total Amount</p>
-            <div className="flex flex-col items-center">
-              <div className="flex items-baseline gap-2 justify-center">
-                {invoice.delivery_missed && invoice.original_amount_inr !== undefined && (
-                  <span className="text-sm line-through opacity-60 font-medium">
-                    {formatINR(invoice.original_amount_inr * (1 + (invoice.gst_rate ?? 0.18)))}
+          
+          <h1 className="text-2xl font-bold mb-2 text-text-primary">Invoice {invoice.invoice_number}</h1>
+          <p className="text-text-secondary text-sm mb-8 max-w-md">
+            This invoice has been successfully generated. You can download the PDF or send it to your client directly.
+          </p>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl mb-10">
+            <div className="bg-bg-elevated/50 border border-border-subtle p-4 rounded-md">
+              <Calendar className="w-5 h-5 text-text-muted mb-2 mx-auto" strokeWidth={1.5} />
+              <p className="text-[10px] text-text-muted uppercase font-semibold mb-0.5">Invoice Date</p>
+              <p className="font-semibold text-sm text-text-primary">{invoice.invoice_date}</p>
+            </div>
+            <div className="bg-bg-elevated/50 border border-border-subtle p-4 rounded-md">
+              <Calendar className="w-5 h-5 text-text-muted mb-2 mx-auto" strokeWidth={1.5} />
+              <p className="text-[10px] text-text-muted uppercase font-semibold mb-0.5">Due Date</p>
+              <p className="font-semibold text-sm text-text-primary">{invoice.due_date}</p>
+            </div>
+            <div className="bg-success/15 border border-success/30 p-4 rounded-md text-success flex flex-col justify-center items-center">
+              <IndianRupee className="w-5 h-5 mb-2 mx-auto" strokeWidth={1.5} />
+              <p className="text-[10px] text-center uppercase font-semibold mb-0.5">Total Amount</p>
+              <div className="flex flex-col items-center">
+                <div className="flex items-baseline gap-2 justify-center">
+                  {invoice.delivery_missed && invoice.original_amount_inr !== undefined && (
+                    <span className="text-xs line-through opacity-60 font-semibold font-mono">
+                      {formatINR(invoice.original_amount_inr * (1 + (invoice.gst_rate ?? 0.18)))}
+                    </span>
+                  )}
+                  <span className="font-bold font-mono text-base">{formatINR(invoice.total_amount)}</span>
+                </div>
+                {invoice.delivery_missed && (
+                  <span className="text-[9px] mt-1 px-1.5 py-0.5 bg-accent-subtle text-accent rounded-full font-semibold">
+                    Discount ({invoice.discount_percentage}%)
                   </span>
                 )}
-                <span className="font-bold text-lg">{formatINR(invoice.total_amount)}</span>
               </div>
-              {invoice.delivery_missed && (
-                <span className="text-[10px] mt-1 px-2 py-0.5 bg-accent-500/10 text-accent-600 dark:text-accent-400 rounded-full font-semibold">
-                  Goodwill Discount Applied ({invoice.discount_percentage}%)
-                </span>
+            </div>
+          </div>
+          
+          <div className="w-full max-w-4xl border border-border-subtle rounded-md overflow-hidden bg-bg-base/30 p-4 mb-10">
+            <InvoicePreview invoiceId={id as string} token={token} />
+          </div>
+          
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-3 mt-4">
+            <Button
+              onClick={handleDownload}
+              disabled={isDownloading}
+              variant="secondary"
+              className="flex justify-center items-center gap-2 w-full sm:w-auto min-w-[160px]"
+            >
+              {isDownloading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Preparing...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" strokeWidth={1.5} />
+                  Download PDF
+                </>
+              )}
+            </Button>
+            
+            <div className="flex flex-col items-center w-full sm:w-auto">
+              <Button
+                onClick={handleOpenEmailModal}
+                variant="primary"
+                className="flex justify-center items-center gap-2 w-full sm:w-auto min-w-[180px]"
+              >
+                <Send className="w-4 h-4" strokeWidth={1.5} />
+                {invoice.sent_at ? 'Resend to Client' : 'Send to Client'}
+              </Button>
+              {invoice.sent_at && (
+                <p className="text-[10px] text-text-muted mt-2 font-medium">
+                  Last sent on {new Date(invoice.sent_at).toLocaleDateString()}
+                </p>
               )}
             </div>
           </div>
-        </div>
-        
-        <div className="w-full max-w-4xl mb-10">
-          <InvoicePreview invoiceId={id as string} token={token} />
-        </div>
-        
-        <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-6">
-          <button
-            onClick={handleDownload}
-            disabled={isDownloading}
-            className="bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 font-medium px-8 py-4 rounded-xl transition-colors flex justify-center items-center gap-3 w-full sm:w-auto"
-          >
-            {isDownloading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Preparing PDF...
-              </>
-            ) : (
-              <>
-                <Download className="w-5 h-5" />
-                Download PDF
-              </>
-            )}
-          </button>
-          
-          <div className="flex flex-col items-center">
-            <button
-              onClick={handleOpenEmailModal}
-              className="bg-accent-500 hover:bg-accent-600 text-white font-medium px-8 py-4 rounded-xl transition-colors flex justify-center items-center gap-3 shadow-lg shadow-accent-500/25 w-full sm:w-auto"
+        </CardBody>
+      </Card>
+
+      {/* Reusable Email Modal */}
+      <Modal
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        title={invoice.sent_at ? 'Resend Invoice' : 'Send Invoice to Client'}
+        footerActions={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => setIsEmailModalOpen(false)}
+              disabled={isSending}
             >
-              <Send className="w-5 h-5" />
-              {invoice.sent_at ? 'Resend Invoice to Client' : 'Send Invoice to Client'}
-            </button>
-            {invoice.sent_at && (
-              <p className="text-xs text-gray-500 mt-2 font-medium">
-                Last sent on {new Date(invoice.sent_at).toLocaleDateString()}
-              </p>
-            )}
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSendEmail}
+              disabled={isSending || !emailSubject.trim() || !emailBody.trim()}
+              variant="primary"
+            >
+              {isSending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4" strokeWidth={1.5} />
+                  Send Email
+                </>
+              )}
+            </Button>
+          </>
+        }
+      >
+        {isPreviewLoading ? (
+          <div className="py-12 flex flex-col justify-center items-center text-text-secondary gap-3">
+            <Loader2 className="w-6 h-6 animate-spin text-accent" />
+            <span className="text-xs font-semibold">Preparing email preview...</span>
           </div>
-        </div>
-      </div>
-
-      {isEmailModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
-          <div className="glass-surface w-full max-w-2xl rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in duration-200">
-            <h3 className="text-xl font-bold mb-6">
-              {invoice.sent_at ? 'Resend Invoice' : 'Send Invoice to Client'}
-            </h3>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="w-full sm:w-1/2">
+                <label className="block text-[10px] font-semibold text-text-muted uppercase mb-1">To (Client)</label>
+                <div className="bg-bg-elevated border border-border-subtle/50 px-3.5 py-2 rounded-md text-xs truncate opacity-70 cursor-not-allowed">
+                  {emailPreview?.to || 'Loading...'}
+                </div>
+              </div>
+              <div className="w-full sm:w-1/2">
+                <label className="block text-[10px] font-semibold text-text-muted uppercase mb-1">From (System)</label>
+                <div className="bg-bg-elevated border border-border-subtle/50 px-3.5 py-2 rounded-md text-xs truncate opacity-70 cursor-not-allowed">
+                  {emailPreview?.from || 'Loading...'}
+                </div>
+              </div>
+            </div>
             
-            {isPreviewLoading ? (
-              <div className="py-12 flex flex-col justify-center items-center text-gray-500 gap-3">
-                <Loader2 className="w-8 h-8 animate-spin text-accent-500 mb-2" />
-                <span>Preparing email preview...</span>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="w-full sm:w-1/2">
-                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">To (Client)</label>
-                    <div className="bg-black/5 dark:bg-white/5 px-3 py-2 rounded-lg text-sm truncate opacity-80 cursor-not-allowed">
-                      {emailPreview?.to || 'Loading...'}
-                    </div>
-                  </div>
-                  <div className="w-full sm:w-1/2">
-                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">From (System)</label>
-                    <div className="bg-black/5 dark:bg-white/5 px-3 py-2 rounded-lg text-sm truncate opacity-80 cursor-not-allowed">
-                      {emailPreview?.from || 'Loading...'}
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Subject</label>
-                  <input
-                    type="text"
-                    value={emailSubject}
-                    onChange={e => setEmailSubject(e.target.value)}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-transparent focus:border-accent-500/50 rounded-lg px-4 py-2 outline-none transition-colors font-medium"
-                    placeholder="Email Subject"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Message</label>
-                  <textarea
-                    value={emailBody}
-                    onChange={e => setEmailBody(e.target.value)}
-                    rows={6}
-                    className="w-full bg-black/5 dark:bg-white/5 border border-transparent focus:border-accent-500/50 rounded-lg px-4 py-3 outline-none transition-colors resize-none leading-relaxed"
-                    placeholder="Type your message here..."
-                  />
-                  <p className="text-xs text-gray-500 mt-2">
-                    The PDF invoice will be automatically attached to this email.
-                  </p>
-                </div>
+            <Input
+              label="Subject"
+              type="text"
+              value={emailSubject}
+              onChange={e => setEmailSubject(e.target.value)}
+              placeholder="Email Subject"
+            />
+            
+            <Textarea
+              label="Message"
+              value={emailBody}
+              onChange={e => setEmailBody(e.target.value)}
+              rows={6}
+              placeholder="Type your message here..."
+            />
+            
+            <p className="text-[10px] text-text-muted mt-2 font-medium">
+              The PDF invoice will be automatically attached to this email.
+            </p>
 
-                {sendError && (
-                  <div className="p-3 mt-4 bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-400 text-sm rounded-lg flex items-start gap-2">
-                    <div className="mt-0.5 font-bold">!</div>
-                    <div>{sendError}</div>
-                  </div>
-                )}
-
-                <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-black/5 dark:border-white/5">
-                  <button
-                    onClick={() => setIsEmailModalOpen(false)}
-                    disabled={isSending}
-                    className="px-6 py-2 rounded-xl font-medium hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSendEmail}
-                    disabled={isSending || !emailSubject.trim() || !emailBody.trim()}
-                    className="bg-accent-500 hover:bg-accent-600 text-white font-medium px-6 py-2 rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50"
-                  >
-                    {isSending ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4" />
-                        Send Email
-                      </>
-                    )}
-                  </button>
-                </div>
+            {sendError && (
+              <div className="p-3.5 bg-danger/10 border border-danger/20 text-danger text-xs rounded-md font-medium">
+                {sendError}
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {sendSuccess && (
-        <div className="fixed bottom-6 right-6 glass-surface bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-6 py-4 rounded-2xl flex items-center gap-3 shadow-xl z-50 animate-in slide-in-from-bottom-5 duration-300">
-          <CheckCircle2 className="w-5 h-5" />
-          <span className="font-medium">Invoice sent successfully to the client.</span>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }

@@ -12,7 +12,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const isPublicRoute = pathname.startsWith('/auth') || pathname === '/' || pathname === '/verify-email';
     if (!isLoading && !token && !isPublicRoute) {
-      router.push('/auth/login');
+      router.push('/');
     }
   }, [token, isLoading, pathname, router]);
 
