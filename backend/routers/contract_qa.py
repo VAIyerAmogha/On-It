@@ -3,12 +3,8 @@ from pydantic import BaseModel
 from bson import ObjectId
 from db import get_db
 
-try:
-    from lib.auth_dep import get_current_user_id
-    from lib.rag import ask_contract
-except ImportError:
-    from backend.lib.auth_dep import get_current_user_id
-    from backend.lib.rag import ask_contract
+from lib.auth_dep import get_current_user_id
+from lib.rag import ask_contract
 
 router = APIRouter()
 

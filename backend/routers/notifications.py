@@ -1,14 +1,9 @@
 from fastapi import APIRouter, Depends
 from db import get_db
 
-try:
-    from lib.auth_dep import get_current_user_id
-    from lib.notifications import get_notifications
-    from lib.state_machine import run_pending_checks
-except ImportError:
-    from backend.lib.auth_dep import get_current_user_id
-    from backend.lib.notifications import get_notifications
-    from backend.lib.state_machine import run_pending_checks
+from lib.auth_dep import get_current_user_id
+from lib.notifications import get_notifications
+from lib.state_machine import run_pending_checks
 
 router = APIRouter()
 

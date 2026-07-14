@@ -5,33 +5,15 @@ from pydantic import BaseModel
 from bson import ObjectId
 from db import get_db
 
-try:
-    from lib.auth_dep import get_current_user_id
-except ImportError:
-    from backend.lib.auth_dep import get_current_user_id
-
-try:
-    from lib.storage import retrieve_pdf, StorageError
-except ImportError:
-    from backend.lib.storage import retrieve_pdf, StorageError
+from lib.auth_dep import get_current_user_id
+from lib.storage import retrieve_pdf, StorageError
 
 import datetime
 from datetime import timezone
 
-try:
-    from lib import email_utils
-except ImportError:
-    from backend.lib import email_utils
-
-try:
-    from lib.invoice_gen import build_cover_note
-except ImportError:
-    from backend.lib.invoice_gen import build_cover_note
-
-try:
-    import config
-except ImportError:
-    from backend import config
+from lib import email_utils
+from lib.invoice_gen import build_cover_note
+import config
 
 router = APIRouter()
 

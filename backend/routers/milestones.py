@@ -6,15 +6,8 @@ from db import get_db
 from pydantic import BaseModel
 from typing import Optional
 
-try:
-    from lib.auth_dep import get_current_user_id
-except ImportError:
-    from backend.lib.auth_dep import get_current_user_id
-
-try:
-    from lib.state_machine import run_pending_checks
-except ImportError:
-    from backend.lib.state_machine import run_pending_checks
+from lib.auth_dep import get_current_user_id
+from lib.state_machine import run_pending_checks
     
 router = APIRouter()
 
@@ -130,10 +123,7 @@ async def paid_milestone(id: str, freelancer_id: str = Depends(get_current_user_
 @router.post("/check-now")
 async def check_now(freelancer_id: str = Depends(get_current_user_id)):
     db = get_db()
-    try:
-        from lib.state_machine import run_pending_checks
-    except ImportError:
-        from backend.lib.state_machine import run_pending_checks
+    from lib.state_machine import run_pending_checks
         
     stats = run_pending_checks(db, freelancer_id)
     return stats
@@ -160,10 +150,7 @@ async def create_milestone_invoice(
     if milestone.get("status") != "TRIGGERED":
         raise HTTPException(status_code=409, detail=f"Milestone is currently '{milestone.get('status')}', not TRIGGERED")
         
-    try:
-        from lib.invoice_gen import create_invoice
-    except ImportError:
-        from backend.lib.invoice_gen import create_invoice
+    from lib.invoice_gen import create_invoice
         
     edited_amount = request.edited_amount if request else None
     invoice = create_invoice(db, id, edited_amount=edited_amount)
@@ -195,10 +182,7 @@ async def create_missed_deadline_invoice(
     if milestone.get("status") != "TRIGGERED":
         raise HTTPException(status_code=409, detail=f"Milestone is currently '{milestone.get('status')}', not TRIGGERED")
         
-    try:
-        from lib.invoice_gen import create_invoice
-    except ImportError:
-        from backend.lib.invoice_gen import create_invoice
+    from lib.invoice_gen import create_invoice
         
     invoice = create_invoice(db, id, delivery_missed=True, discount_percentage=request.discount_percentage)
     invoice["_id"] = str(invoice["_id"])

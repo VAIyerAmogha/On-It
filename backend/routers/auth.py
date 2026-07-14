@@ -10,10 +10,7 @@ import config
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
-try:
-    from lib import email_utils
-except ImportError:
-    from backend.lib import email_utils
+from lib import email_utils
 
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
