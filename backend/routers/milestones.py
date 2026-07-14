@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from bson import ObjectId
+import os
+import db
 from db import get_db
 from pydantic import BaseModel
 from typing import Optional
@@ -8,6 +10,11 @@ try:
     from lib.auth_dep import get_current_user_id
 except ImportError:
     from backend.lib.auth_dep import get_current_user_id
+
+try:
+    from lib.state_machine import run_pending_checks
+except ImportError:
+    from backend.lib.state_machine import run_pending_checks
     
 router = APIRouter()
 
@@ -75,13 +82,6 @@ async def get_milestones(
             if invoice:
                 m["invoice_id"] = str(invoice["_id"])
 
-        
-    try:
-        from lib.state_machine import run_pending_checks
-    except ImportError:
-        from backend.lib.state_machine import run_pending_checks
-        
-    background_tasks.add_task(run_pending_checks, db, freelancer_id)
         
     return milestones
 
@@ -203,3 +203,23 @@ async def create_missed_deadline_invoice(
     invoice = create_invoice(db, id, delivery_missed=True, discount_percentage=request.discount_percentage)
     invoice["_id"] = str(invoice["_id"])
     return invoice
+
+@router.post("/milestones/check-now-cron")
+async def cron_check_all(request: Request):
+    auth_header = request.headers.get("Authorization", "")
+    expected = f"Bearer {os.environ.get('CRON_SECRET', '')}"
+    if auth_header != expected:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    db = get_db()
+    profiles = list(db.profiles.find({}, {"_id": 1}))
+    count = 0
+    for profile in profiles:
+        try:
+            run_pending_checks(db, str(profile["_id"]))
+            count += 1
+        except Exception:
+            pass
+    
+    return {"checked": count, "freelancers": len(profiles)}
+

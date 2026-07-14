@@ -24,7 +24,7 @@ export default function ContractPDFPage({ params }: { params: Promise<{ id: stri
     
     const fetchPdf = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/contracts/${id}/pdf`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/contracts/${id}/pdf`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }

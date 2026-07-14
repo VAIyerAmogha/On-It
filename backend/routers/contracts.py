@@ -166,12 +166,6 @@ async def list_contracts(
         c["total_milestones"] = len(milestones)
         c["paid_milestones"] = sum(1 for m in milestones if m.get("status") == "PAID")
         
-    try:
-        from lib.state_machine import run_pending_checks
-    except ImportError:
-        from backend.lib.state_machine import run_pending_checks
-        
-    background_tasks.add_task(run_pending_checks, db, freelancer_id)
     return contracts
 
 @router.get("/stats")

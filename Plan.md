@@ -437,7 +437,8 @@ FOLLOWUP_SCHEDULE_DAYS = [-3, 0, 7, 14, 30]
 44. Contract type classification eval
 45. RAG faithfulness eval: 30 QA pairs (direct / synthesis / not-in-contract)
 46. Latency profiling per stage on Render free tier
-47. Render cold start handling: /health ping from frontend on page load
+47. [x] Render cold start handling: /health ping from frontend on page load — completed
+48. [x] Vercel Backend Migration: Wrapped FastAPI with Mangum handler in api/index.py, configured routing and cron scheduling in vercel.json, secured check-now-cron endpoint with CRON_SECRET, updated CORSMiddleware configuration in main.py, and unified frontend API base url with NEXT_PUBLIC_API_URL — completed
 
 ---
 

@@ -47,7 +47,7 @@ export default function MilestoneCard({ milestone, onTrigger, onInvoice, onMisse
     
     if (['INVOICED', 'OVERDUE', 'PAID'].includes(milestone.status) && !milestone.invoice_id) {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       
       fetch(`${baseUrl}/api/invoices/by-milestone/${milestone._id}`, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},

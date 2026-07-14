@@ -108,7 +108,7 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
     if (!token) return;
     setIsDownloading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/invoices/${id}/pdf`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/invoices/${id}/pdf`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

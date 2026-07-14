@@ -87,7 +87,7 @@ export default function Dashboard() {
     if (extractionStatus === 'processing' && uploadedContractId && token) {
       const interval = setInterval(async () => {
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/contracts/${uploadedContractId}`, {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/contracts/${uploadedContractId}`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
@@ -152,7 +152,7 @@ export default function Dashboard() {
     formData.append('file', uploadFile);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/contracts/upload`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/contracts/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

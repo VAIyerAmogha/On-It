@@ -12,3 +12,4 @@ pdfplumber
 python-multipart
 reportlab
 google-auth
+mangum>=0.17.0

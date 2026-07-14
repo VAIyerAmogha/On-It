@@ -166,5 +166,6 @@ Recent completions:
 - Bugfix: Resolved "Unknown Client" bug in timeline view by falling back to contract client_contact name inside the backend milestone listing endpoint — completed
 - Style: Reduced width of timeline milestone cards to max-w-2xl and adjusted padding to p-3.5 sm:p-4 to eliminate empty space — completed
 - Feature: Redesigned AI chat to open as a sticky inline sidebar on the right of the contract details page, dynamically pushing page content to the left and expanding the container to max-w-7xl, while retaining full-screen drawer overlay behavior on mobile — completed
+- Vercel Backend Migration: Wrapped FastAPI with Mangum handler in api/index.py, configured routing and cron scheduling in vercel.json, secured check-now-cron endpoint with CRON_SECRET, updated CORSMiddleware configuration in main.py, and unified frontend API base url with NEXT_PUBLIC_API_URL — completed
 Open questions / blockers:
 - None

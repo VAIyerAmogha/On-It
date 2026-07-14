@@ -26,7 +26,7 @@ export default function UploadPage() {
     if (extractionStatus === 'processing' && contractId && token) {
       const interval = setInterval(async () => {
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/contracts/${contractId}`, {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/contracts/${contractId}`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
@@ -91,7 +91,7 @@ export default function UploadPage() {
     formData.append('file', file);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/api/contracts/upload`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/contracts/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

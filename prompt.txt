@@ -1,5 +1,95 @@
 Refer CLAUDE.md and Plan.md. 
 
-i want a rework of the dashboard. i want the top section to have a greeting to the user and a statistics cards (revenue, paid/unpaid contracts, active contracts, payment overdue) under that in graphics with sleek animations. below that i want another section to add new contracts. move all contracts to a seperate 'contracts' page. with a timeline view 
+Read every file in the codebase before making any change. Understand the full working application first. Then make only the following changes — nothing else. Do not change any business logic, API behavior, data models, or frontend functionality. The application must work identically after these changes.
+STEP 1 — Install Mangum
+Add mangum>=0.17.0 to requirements.txt. Nothing else changes in this file.
+STEP 2 — Create api/index.py
+Find where main.py lives. Create a file at api/index.py relative to the same root. Its only content:
+pythonimport sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from main import app
+from mangum import Mangum
+handler = Mangum(app, lifespan="off")
+Do not modify main.py itself. The handler lives in api/index.py only.
+STEP 3 — Create vercel.json at the backend root
+json{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "api/index.py"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/milestones/check-now-cron",
+      "schedule": "0 * * * *"
+    }
+  ]
+}
+STEP 4 — Add the cron endpoint
+Find routers/milestones.py. Add this new endpoint at the bottom. Do not touch any existing endpoint:
+python@router.post("/milestones/check-now-cron")
+async def cron_check_all(request: Request):
+    auth_header = request.headers.get("Authorization", "")
+    expected = f"Bearer {os.environ.get('CRON_SECRET', '')}"
+    if auth_header != expected:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    profiles = list(db.profiles.find({}, {"_id": 1}))
+    count = 0
+    for profile in profiles:
+        try:
+            run_pending_checks(str(profile["_id"]))
+            count += 1
+        except Exception:
+            pass
+    
+    return {"checked": count, "freelancers": len(profiles)}
+Make sure Request, os, db, run_pending_checks, and HTTPException are all imported at the top of the file — add any that are missing. Do not change any existing imports or endpoints.
+STEP 5 — Remove BackgroundTask calls from GET endpoints
+Find every place in the codebase where run_pending_checks is called as a BackgroundTask — specifically inside GET endpoints for contracts and milestones. Remove only the BackgroundTask wrapper and the run_pending_checks call inside it. Leave everything else in those endpoints exactly as is. The existing POST /api/milestones/check-now endpoint that calls run_pending_checks synchronously must stay completely unchanged.
+STEP 6 — Update CORS in main.py
+Find the CORSMiddleware setup in main.py. Update allow_origins to:
+pythonallow_origins=[
+    "http://localhost:3000",
+    os.environ.get("FRONTEND_URL", "http://localhost:3000"),
+]
+Add import os at the top of main.py if it is not already there. Do not change anything else in main.py.
+STEP 7 — Add timeouts to all external HTTP calls
+Find every requests.get, requests.post, requests.request, httpx.get, httpx.post call across the entire backend codebase that does not already have a timeout parameter. Add timeout=45 to each one. Do not change any other parameter. Do not touch calls that already have a timeout set.
+STEP 8 — MongoDB cold start resilience
+Find where the MongoDB client is initialized. If it is initialized at module level as a singleton (e.g. client = MongoClient(...) at the top of db.py), leave it exactly as is — this is correct. If it is initialized inside a function on every call, refactor it to use a module-level singleton with a lazy init pattern:
+python_client = None
+
+def get_client():
+    global _client
+    if _client is None:
+        _client = MongoClient(os.environ["MONGODB_URI"])
+    return _client
+Only make this change if the current pattern initializes a new MongoClient on every function call. If it is already a singleton, do nothing.
+STEP 9 — Frontend API base URL
+Find where the frontend makes API calls — look for the base URL or API prefix used in api.ts or equivalent. If the base URL is hardcoded as http://localhost:8000 or any other hardcoded string, replace it with:
+typescriptconst API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+Search the entire frontend codebase for any remaining hardcoded localhost:8000 or 127.0.0.1:8000 references and replace them all with API_BASE or process.env.NEXT_PUBLIC_API_URL. Do not change any other part of the API calling code.
+STEP 10 — Verify nothing broke
+After all changes:
+
+Run python -m py_compile api/index.py and every modified Python file. Report any syntax errors.
+Run python -c "from api.index import handler; print('OK')" from the backend root. If it fails, show the exact error.
+Run npx tsc --noEmit in the frontend directory. Report any TypeScript errors introduced by these changes.
+Confirm the following are completely unchanged and untouched: all route handlers except the new cron endpoint, all Pydantic models, all lib/ files except timeout additions, all frontend components and pages except the API base URL change, all test files.
+
+Report exactly what was changed in each file, one file at a time. If any step could not be completed, say exactly why and what you need.
 
 log updates CLAUDE.md and Plan.md with the exisiting format
