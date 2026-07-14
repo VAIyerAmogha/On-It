@@ -161,6 +161,11 @@ async def list_contracts(
     for c in contracts:
         c["_id"] = str(c["_id"])
         
+        # Calculate total and paid milestones dynamically
+        milestones = list(db.milestones.find({"contract_id": c["_id"], "freelancer_id": freelancer_id}))
+        c["total_milestones"] = len(milestones)
+        c["paid_milestones"] = sum(1 for m in milestones if m.get("status") == "PAID")
+        
     try:
         from lib.state_machine import run_pending_checks
     except ImportError:
@@ -168,6 +173,60 @@ async def list_contracts(
         
     background_tasks.add_task(run_pending_checks, db, freelancer_id)
     return contracts
+
+@router.get("/stats")
+async def get_dashboard_stats(
+    freelancer_id: str = Depends(get_current_user_id)
+):
+    db = get_db()
+    contracts = list(db.contracts.find({"freelancer_id": freelancer_id}))
+    milestones = list(db.milestones.find({"freelancer_id": freelancer_id}))
+    
+    total_revenue = 0.0
+    contract_milestones = {}
+    for ms in milestones:
+        c_id = str(ms["contract_id"])
+        if c_id not in contract_milestones:
+            contract_milestones[c_id] = []
+        contract_milestones[c_id].append(ms)
+        
+        if ms.get("status") == "PAID":
+            total_revenue += float(ms.get("amount_inr") or 0)
+            
+    paid_contracts_count = 0
+    unpaid_contracts_count = 0
+    active_contracts_count = 0
+    
+    for c in contracts:
+        c_id = str(c["_id"])
+        c_ms = contract_milestones.get(c_id, [])
+        
+        if c_ms:
+            total_ms = len(c_ms)
+            paid_ms = sum(1 for m in c_ms if m.get("status") == "PAID")
+            
+            if paid_ms == total_ms:
+                paid_contracts_count += 1
+            else:
+                unpaid_contracts_count += 1
+                active_contracts_count += 1
+        else:
+            unpaid_contracts_count += 1
+            if c.get("extraction_status") == "processing":
+                active_contracts_count += 1
+
+    overdue_milestones = [m for m in milestones if m.get("status") == "OVERDUE"]
+    overdue_count = len(overdue_milestones)
+    overdue_amount = sum(float(m.get("amount_inr") or 0) for m in overdue_milestones)
+    
+    return {
+        "total_revenue": total_revenue,
+        "paid_contracts_count": paid_contracts_count,
+        "unpaid_contracts_count": unpaid_contracts_count,
+        "active_contracts_count": active_contracts_count,
+        "overdue_count": overdue_count,
+        "overdue_amount": overdue_amount
+    }
 
 @router.get("/{id}")
 async def get_contract(id: str, freelancer_id: str = Depends(get_current_user_id)):
@@ -218,7 +277,16 @@ async def delete_contract(id: str, freelancer_id: str = Depends(get_current_user
     # 2. Delete all invoices from database
     db.invoices.delete_many({"contract_id": id, "freelancer_id": freelancer_id})
     
-    # 3. Delete all milestones from database
+    # 3. Retrieve milestone IDs first, then delete milestone events and milestones
+    milestones = list(db.milestones.find({"contract_id": id, "freelancer_id": freelancer_id}))
+    milestone_ids = []
+    for m in milestones:
+        milestone_ids.append(m["_id"])
+        milestone_ids.append(str(m["_id"]))
+
+    if milestone_ids:
+        db.milestone_events.delete_many({"milestone_id": {"$in": milestone_ids}})
+    
     db.milestones.delete_many({"contract_id": id, "freelancer_id": freelancer_id})
     
     # 4. Delete all contract chunks (RAG index) from database

@@ -11,8 +11,6 @@ class SettingsUpdate(BaseModel):
     name: Optional[str] = None
     address: Optional[str] = None
     gstin: Optional[str] = None
-    gmail_address: Optional[str] = None
-    gmail_app_password: Optional[str] = None
     default_gst_rate: Optional[float] = None
     invoice_prefix: Optional[str] = None
 

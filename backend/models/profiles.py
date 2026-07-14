@@ -13,8 +13,6 @@ class Profile(BaseModel):
     name: str
     address: str
     gstin: str
-    gmail_address: str
-    gmail_app_password: str
     default_gst_rate: float
     invoice_prefix: str
     invoice_counter: int

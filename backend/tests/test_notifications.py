@@ -102,14 +102,14 @@ def test_get_notifications_sorting():
         db.milestones.insert_many([
             {
                 "_id": m5_oid, "contract_id": contract_id, "freelancer_id": freelancer_id,
-                "milestone_number": 5, "trigger_type": "date_based",
+                "milestone_number": 5, "trigger_type": "recurring",
                 "trigger_date": datetime.combine(today + timedelta(days=7), datetime.min.time()).replace(tzinfo=timezone.utc),
                 "status": "PENDING", "extraction_confidence": 0.9, "modified_from_contract": False,
                 "created_at": datetime.now(timezone.utc), "updated_at": datetime.now(timezone.utc)
             },
             {
                 "_id": m6_oid, "contract_id": contract_id, "freelancer_id": freelancer_id,
-                "milestone_number": 6, "trigger_type": "date_based",
+                "milestone_number": 6, "trigger_type": "recurring",
                 "trigger_date": datetime.combine(today + timedelta(days=4), datetime.min.time()).replace(tzinfo=timezone.utc),
                 "status": "PENDING", "extraction_confidence": 0.9, "modified_from_contract": False,
                 "created_at": datetime.now(timezone.utc), "updated_at": datetime.now(timezone.utc)

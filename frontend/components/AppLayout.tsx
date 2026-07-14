@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import Sidebar from './Sidebar';
+import Navbar from './Navbar';
 import { HealthPing } from './HealthPing';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -10,7 +10,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isLandingRoute = pathname === '/';
 
   if (isLandingRoute) {
-    return <>{children}</>;
+    return (
+      <>
+        <Navbar />
+        {children}
+      </>
+    );
   }
 
   if (isAuthRoute) {
@@ -24,8 +29,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <HealthPing />
-      <Sidebar />
-      <main className="flex-1 ml-[240px] p-8 min-h-screen relative z-0 bg-bg-base">
+      <Navbar />
+      <main className="flex-1 pt-24 px-4 pb-4 sm:pt-28 sm:px-8 sm:pb-8 min-h-screen relative z-0 bg-bg-base">
         <div className="max-w-5xl mx-auto w-full animate-fade-in-up">
           {children}
         </div>

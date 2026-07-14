@@ -26,6 +26,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "On-It",
   description: "Agentic Freelancer Contract-to-Invoice System",
+  icons: {
+    icon: "/favicon-32.png",
+    apple: "/icon-192.png",
+  },
 };
 
 export default function RootLayout({

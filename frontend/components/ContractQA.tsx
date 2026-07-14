@@ -89,12 +89,12 @@ export default function ContractQA({ contractId, isOpen, onClose }: ContractQAPr
     <>
       {/* Backdrop overlay */}
       <div 
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity animate-in fade-in duration-base"
+        className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity animate-in fade-in duration-base"
         onClick={onClose}
       />
       
-      {/* Drawer */}
-      <div className="fixed inset-y-0 right-0 w-full md:w-[400px] lg:w-[450px] bg-bg-surface/95 border-l border-border-default z-50 flex flex-col shadow-modal animate-in slide-in-from-right duration-base ease-spring">
+      {/* Drawer / Sidebar */}
+      <div className="fixed md:sticky inset-y-0 right-0 md:inset-y-auto md:top-28 w-full md:w-[400px] lg:w-[450px] h-screen md:h-[calc(100vh-140px)] bg-bg-surface/95 border-l md:border border-border-default md:rounded-xl z-50 md:z-30 flex flex-col shadow-modal md:shadow-base animate-in slide-in-from-right md:slide-in-from-right-4 duration-base ease-spring">
         <div className="h-16 px-6 flex items-center justify-between border-b border-border-subtle shrink-0">
           <div className="flex items-center gap-2 text-accent">
             <Sparkles className="w-5 h-5" strokeWidth={1.5} />

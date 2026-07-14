@@ -217,11 +217,13 @@ export default function ContractPage({ params }: { params: Promise<{ id: string 
   }
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto pb-16">
-      <Link href="/dashboard" className="inline-flex items-center text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors">
-        <ArrowLeft className="w-4 h-4 mr-1.5" strokeWidth={2} />
-        Dashboard
-      </Link>
+    <div className={`flex flex-col md:flex-row gap-8 mx-auto pb-16 items-start transition-all duration-300 ${isQAOpen ? 'max-w-7xl' : 'max-w-5xl'}`}>
+      {/* Main Content Area */}
+      <div className="flex-1 min-w-0 w-full space-y-8">
+        <Link href="/dashboard" className="inline-flex items-center text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors">
+          <ArrowLeft className="w-4 h-4 mr-1.5" strokeWidth={2} />
+          Dashboard
+        </Link>
 
       <Card variant="default">
         <CardBody className="p-8 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
@@ -326,12 +328,13 @@ export default function ContractPage({ params }: { params: Promise<{ id: string 
           </div>
         )}
       </div>
-
-      <ContractQA 
-        contractId={id} 
-        isOpen={isQAOpen} 
-        onClose={() => setIsQAOpen(false)} 
-      />
     </div>
-  );
+
+    <ContractQA 
+      contractId={id} 
+      isOpen={isQAOpen} 
+      onClose={() => setIsQAOpen(false)} 
+    />
+  </div>
+);
 }

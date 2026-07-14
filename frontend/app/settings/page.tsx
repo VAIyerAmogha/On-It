@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../../lib/api';
-import { Save, User, Building, Mail, Loader2 } from 'lucide-react';
+import { Save, User, Building, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/Button';
 import { Input } from '../../components/Input';
@@ -18,8 +18,6 @@ export default function SettingsPage() {
     name: '',
     address: '',
     gstin: '',
-    gmail_address: '',
-    gmail_app_password: '', // Kept empty initially (write-only)
     default_gst_rate: 0.18,
     invoice_prefix: 'INV-'
   });
@@ -38,8 +36,6 @@ export default function SettingsPage() {
           name: data.name || '',
           address: data.address || '',
           gstin: data.gstin || '',
-          gmail_address: data.gmail_address || '',
-          gmail_app_password: '', // Never populate from backend
           default_gst_rate: data.default_gst_rate ?? 0.18,
           invoice_prefix: data.invoice_prefix || 'INV-'
         });
@@ -68,20 +64,13 @@ export default function SettingsPage() {
     setError('');
     
     try {
-      // Only include password if explicitly typed by the user
-      const payload: any = { ...formData };
-      if (!payload.gmail_app_password) {
-        delete payload.gmail_app_password;
-      }
-      
       await apiFetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(formData)
       });
       
       showToast('Settings saved successfully', 'success');
-      setFormData(prev => ({ ...prev, gmail_app_password: '' })); // clear password input field
     } catch (err: any) {
       setError(err.message || 'Failed to save settings.');
       showToast(err.message || 'Failed to save settings', 'error');
@@ -200,40 +189,7 @@ export default function SettingsPage() {
           </CardBody>
         </Card>
 
-        {/* Email Templates */}
-        <Card variant="default">
-          <CardBody className="p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-md bg-accent-subtle flex items-center justify-center text-accent border border-accent/10">
-                <Mail className="w-5 h-5" strokeWidth={1.5} />
-              </div>
-              <h2 className="text-xl font-bold text-text-primary">Email Integration</h2>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Input
-                label="Gmail Address"
-                type="email"
-                name="gmail_address"
-                value={formData.gmail_address}
-                onChange={handleChange}
-                placeholder="you@gmail.com"
-              />
-              <Input
-                label="Gmail App Password"
-                type="password"
-                name="gmail_app_password"
-                value={formData.gmail_app_password}
-                onChange={handleChange}
-                placeholder="••••••••••••••••"
-                autoComplete="new-password"
-              />
-            </div>
-            <p className="mt-4 text-xs text-text-muted">
-              You must generate a 16-character "App Password" in your Google Account security settings. Standard passwords will not work.
-            </p>
-          </CardBody>
-        </Card>
+
 
       </form>
     </div>

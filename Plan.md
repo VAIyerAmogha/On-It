@@ -75,7 +75,6 @@ Six collections. All user-data queries must filter by `freelancer_id`.
 profiles
   _id, email, password_hash, name, address, gstin,
   bank_name, account_number, ifsc, upi_id,
-  gmail_address, gmail_app_password (encrypted),
   default_gst_rate, invoice_prefix, invoice_counter,
   created_at
 
@@ -412,6 +411,25 @@ FOLLOWUP_SCHEDULE_DAYS = [-3, 0, 7, 14, 30]
 41n. [x] Feature: Implemented the frontend "Missed Deadline" flow on MilestoneCard (split buttons in TRIGGERED state, glass-surface dialog, integer discount input validation, live client-side discount preview) and updated the Invoice detail page (muted "Goodwill Discount Applied" badge, original amount struck-through).
 41o. [x] Feature: Added three new delivery-level notification types (MISSED_DELIVERY, DELIVERY_REMINDER, UNINVOICED_TRIGGERED) to backend `lib/notifications.py` with updated urgency sorting order.
 41p. [x] Feature: Updated Dashboard notification panel frontend to render the three new delivery-level notification types (MISSED_DELIVERY, DELIVERY_REMINDER, UNINVOICED_TRIGGERED) with dedicated icons, inline actions, and error handling.
+41q. [x] Feature: Replaced persistent vertical Sidebar layout with a glassmorphic top Navbar using shadcn design conventions, featuring responsive mobile menus, dynamic contracts dropdown (fetching from /api/contracts), and profile/logout controls.
+41r. [x] Feature: Replaced hardcoded progress bar and paid milestone values on Dashboard contract cards with dynamic backend-derived counts.
+41s. [x] Bugfix: Runs pending checks synchronously on the `list_notifications` endpoint, ensuring that notifications populate correctly on initial dashboard load instead of waiting for a subsequent contract visit.
+41t. [x] Feature: Added individual close (X) buttons to Dashboard notifications, persisting dismissal preferences in localStorage.
+41u. [x] Feature: Completed the cascading contract deletion pipeline, deleting the contract document, raw contract PDF from GridFS, all associated milestones, milestone_events audit logs, invoices, generated invoice PDFs from GridFS, followup logs, and RAG/vector chunks.
+41v. [x] Feature: Reworked the Dashboard to feature a user greeting, animated SVG statistics cards (Revenue, Paid/Unpaid contracts, Active contracts, and Overdue payments), and integrated the upload file interface directly on the dashboard page with live processing status polling.
+41w. [x] Feature: Created a dedicated `/contracts` page featuring a dual-tab layout with a chronological milestone timeline (detailing clients, amounts, status, and deadlines) and a searchable, status-filtered contracts list.
+41x. [x] Feature: Added backend endpoints `GET /api/contracts/stats` and `GET /api/milestones/all/list` to support the dashboard statistics and chronological milestone timeline.
+41y. [x] Feature: Updated the glassmorphic Navbar dropdown and mobile menu drawer to include direct routing to the new contracts list & timeline page.
+41z. [x] Bugfix: Resolved layout overlap in AppLayout by switching padding shorthand `p-4 sm:p-8` to explicit `pt-24 px-4 pb-4 sm:pt-28 sm:px-8 sm:pb-8`, ensuring fixed navbar height clearance is not overridden.
+41za. [x] Refactor: Updated Groq chatbot/RAG and invoice cover note email system prompts to align with a user-facing freelancer perspective (framing the freelancer as the user who invoices clients for completed milestones).
+41zb. [x] Feature: Moved Dashboard notifications panel to the top of the page (above the greeting section).
+41zc. [x] Feature: Added inline expandable summaries (40-50 words) on notification hover specifying what action needs to be done and by when.
+41zd. [x] Bugfix: Refactored notifications text to output "expected by end of day" / "Due by end of day" instead of "0 days" when a deadline is today.
+41ze. [x] Feature: Implemented centered delete contract confirmation modal with a blurred background using the customized Modal component, showing detailed cascading impacts before deletion.
+41zf. [x] Refactor: Updated custom Modal component to render into document.body using React Portals, resolving viewport layout clipping issues when fixed modals are nested inside elements with animations/transitions.
+41zg. [x] Bugfix: Resolved "Unknown Client" bug in timeline view by falling back to contract client_contact name inside the backend milestone listing endpoint.
+41zh. [x] Style: Reduced width of timeline milestone cards to max-w-2xl and adjusted padding to p-3.5 sm:p-4 to eliminate empty space.
+41zi. [x] Feature: Redesigned AI chat to open as a sticky inline sidebar on the right of the contract details page, dynamically pushing page content to the left and expanding the container to max-w-7xl, while retaining full-screen drawer overlay behavior on mobile.
 
 ### Phase 8 — Evaluation + hardening
 42. Test set: 20 freelance contracts across four types

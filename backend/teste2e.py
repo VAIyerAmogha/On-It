@@ -95,7 +95,6 @@ def main():
         "name": "E2E Test User",
         "address": "1 Test Street, Bengaluru, Karnataka 560001",
         "gstin": "29ABCDE1234F1Z5",
-        "gmail_address": "e2e_sender@example.com",
         "default_gst_rate": 0.18,
         "invoice_prefix": "E2E",
         "invoice_counter": 1,

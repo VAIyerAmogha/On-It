@@ -34,6 +34,27 @@ async def get_milestone_detail(id: str, freelancer_id: str = Depends(get_current
         
     return {"milestone": milestone, "contract": contract, "invoice": invoice}
 
+@router.get("/all/list")
+async def list_all_milestones(
+    freelancer_id: str = Depends(get_current_user_id)
+):
+    db = get_db()
+    milestones = list(db.milestones.find({"freelancer_id": freelancer_id}))
+    for m in milestones:
+        m["_id"] = str(m["_id"])
+        m["contract_id"] = str(m["contract_id"])
+        
+        contract = db.contracts.find_one({"_id": ObjectId(m["contract_id"])})
+        if contract:
+            m["contract_title"] = contract.get("title") or contract.get("project_name") or "Untitled Project"
+            m["client_name"] = contract.get("client_name") or (contract.get("client_contact") or {}).get("name") or "Unknown Client"
+            
+        if m.get("status") in ("INVOICED", "OVERDUE", "PAID"):
+            invoice = db.invoices.find_one({"milestone_id": m["_id"]})
+            if invoice:
+                m["invoice_id"] = str(invoice["_id"])
+    return milestones
+
 @router.get("/{contract_id}")
 async def get_milestones(
     contract_id: str, 

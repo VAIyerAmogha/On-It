@@ -332,12 +332,11 @@ Displays:
 1. Modal opens; `GET /api/invoices/<id>/email-preview` called immediately.
 2. Groq generates a context-aware 2-sentence cover note. Tone adapts: professional → neutral → escalating (overdue). Missed-deadline invoices acknowledge the delay and mention the goodwill discount.
 3. Modal shows:
-   - **To** (client email, read-only)
-   - **From** (freelancer Gmail, read-only)
+   - **From** (system email, read-only)
    - **Subject** (editable, AI-prefilled)
    - **Body** (editable textarea, AI-prefilled)
 4. User reviews/edits and clicks **"Send Email"**.
-5. `POST /api/invoices/<id>/send` → SMTP dispatch (freelancer Gmail App Password → falls back to global SMTP).
+5. `POST /api/invoices/<id>/send` → SMTP dispatch (uses global SMTP settings).
 6. `followup_logs` entry created; `sent_at` saved to invoice.
 7. Success: modal closes; green toast for 5 seconds.
 
@@ -389,14 +388,7 @@ Chat history is preserved within the session; lost on page reload.
 - **Invoice Prefix** (e.g. `INV-` → generates `INV-0001`)
 - **Default GST Rate** (decimal, e.g. `0.18` for 18%)
 
-### Email Integration
-- **Gmail Address** — "From" address for all sent invoices
-- **Gmail App Password** — 16-character Google App Password (write-only; blank = keep existing)
 
-**Save behavior:**
-- If `gmail_app_password` is blank, it's excluded from the payload.
-- On success: green "Saved successfully" indicator for 3 seconds.
-- On error: red error message at top of form.
 
 ---
 
@@ -451,7 +443,7 @@ The invoice send flow requires `client_email` from the contract. LLM extraction 
 If the AI extracts a wrong amount, date, or description, the user is stuck. An inline edit on `MilestoneCard` (amount, description, trigger date) with a `PATCH /api/milestones/<id>` endpoint would dramatically improve trust in the tool.
 
 **4. No onboarding checklist after sign-up**
-New users arrive at an empty dashboard with no guidance. A simple checklist (☐ Add your business name → ☐ Add Gmail credentials → ☐ Upload your first contract) would dramatically improve activation rates.
+New users arrive at an empty dashboard with no guidance. A simple checklist (☐ Add your business name → ☐ Upload your first contract) would dramatically improve activation rates.
 
 ---
 
@@ -498,7 +490,7 @@ The generated PDF is functional but generic. Allowing freelancers to upload a lo
 If the LLM classifies a contract as `unsupported`, users see "Unclassified" with no context. They should see: *"This contract type isn't supported for automated milestone extraction. You can still use the AI chat to ask questions about it."*
 
 **17. Fallback SMTP sends silently from a system address**
-If the user hasn't set up Gmail credentials, the invoice is sent from a generic system address with no warning. Show a banner: *"You're sending from the On-It system address. Add your Gmail in Settings to send as yourself."*
+
 
 **18. No cross-contract invoice history view**
 There's no `/invoices` list page. An invoice table (invoice number, client, amount, date, sent status) would be very useful for end-of-year reporting and payment tracking — a common freelancer need.
