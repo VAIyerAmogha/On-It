@@ -5,7 +5,15 @@
       "src": "api/index.py",
       "use": "@vercel/python",
       "config": {
-        "maxLambdaSize": "50mb"
+        "maxLambdaSize": "50mb",
+        "includeFiles": [
+          "lib/**",
+          "routers/**",
+          "models/**",
+          "main.py",
+          "config.py",
+          "db.py"
+        ]
       }
     }
   ],
