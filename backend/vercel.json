@@ -7,9 +7,12 @@
       "config": {
         "maxLambdaSize": "50mb",
         "includeFiles": [
-          "lib/**",
-          "routers/**",
-          "models/**",
+          "lib/__init__.py",
+          "lib/*.py",
+          "routers/__init__.py",
+          "routers/*.py",
+          "models/__init__.py",
+          "models/*.py",
           "main.py",
           "config.py",
           "db.py"
