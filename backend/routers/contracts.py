@@ -5,9 +5,9 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, BackgroundTasks
 from db import get_db
 
-from lib.auth_dep import get_current_user_id
-from lib.ingestion import ingest_file
-from lib.classifier import classify_contract
+from helpers.auth_dep import get_current_user_id
+from helpers.ingestion import ingest_file
+from helpers.classifier import classify_contract
 
 router = APIRouter()
 
@@ -17,7 +17,7 @@ def process_ingestion(contract_id: str, temp_path: str, filename: str):
         # 1. Ingest file
         full_text, sections = ingest_file(temp_path, filename)
         
-        from lib.extractor import extract_contract, resolve_amounts, save_milestones, is_review_required
+        from helpers.extractor import extract_contract, resolve_amounts, save_milestones, is_review_required
             
         # 2. Extract everything in one Groq call
         extracted_data = extract_contract(full_text)
@@ -52,7 +52,7 @@ def process_ingestion(contract_id: str, temp_path: str, filename: str):
         if milestones:
             save_milestones(db, milestones)
             
-        from lib.rag import index_contract
+        from helpers.rag import index_contract
             
         index_contract(db, contract_id, contract["freelancer_id"], sections)
             
@@ -102,7 +102,7 @@ async def upload_contract(
         
     db = get_db()
     try:
-        from lib.storage import save_pdf
+        from helpers.storage import save_pdf
         file_url = save_pdf(db, temp_path, file.filename, metadata={"freelancer_id": freelancer_id}, bucket_name="contracts")
     except Exception as e:
         if os.path.exists(temp_path):
@@ -236,7 +236,7 @@ async def delete_contract(id: str, freelancer_id: str = Depends(get_current_user
         raise HTTPException(status_code=404, detail="Contract not found")
     
     # Import delete_pdf helper dynamically to handle local vs root module path issues
-    from lib.storage import delete_pdf
+    from helpers.storage import delete_pdf
 
     # 1. Fetch all invoices associated with the contract to delete their PDFs & followup logs
     invoices = list(db.invoices.find({"contract_id": id, "freelancer_id": freelancer_id}))
@@ -296,7 +296,7 @@ async def get_contract_pdf(id: str, freelancer_id: str = Depends(get_current_use
         raise HTTPException(status_code=404, detail="Contract file not available")
         
     try:
-        from lib.storage import retrieve_pdf
+        from helpers.storage import retrieve_pdf
         pdf_bytes = retrieve_pdf(db, file_id, bucket_name="contracts")
         return Response(content=pdf_bytes, media_type="application/pdf")
     except Exception as e:

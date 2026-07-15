@@ -6,8 +6,8 @@ from db import get_db
 from pydantic import BaseModel
 from typing import Optional
 
-from lib.auth_dep import get_current_user_id
-from lib.state_machine import run_pending_checks
+from helpers.auth_dep import get_current_user_id
+from helpers.state_machine import run_pending_checks
     
 router = APIRouter()
 
@@ -94,7 +94,7 @@ async def trigger_milestone(id: str, freelancer_id: str = Depends(get_current_us
     if milestone.get("status") != "PENDING":
         raise HTTPException(status_code=409, detail=f"Milestone is currently '{milestone.get('status')}', not PENDING")
         
-    from lib.state_machine import transition_milestone
+    from helpers.state_machine import transition_milestone
     updated = transition_milestone(db, id, "TRIGGERED", actor="user")
     updated["_id"] = str(updated["_id"])
     return updated
@@ -115,7 +115,7 @@ async def paid_milestone(id: str, freelancer_id: str = Depends(get_current_user_
     if milestone.get("status") not in ("INVOICED", "OVERDUE"):
         raise HTTPException(status_code=409, detail=f"Milestone is currently '{milestone.get('status')}', not INVOICED or OVERDUE")
         
-    from lib.state_machine import mark_paid
+    from helpers.state_machine import mark_paid
     result = mark_paid(db, id)
     result["milestone"]["_id"] = str(result["milestone"]["_id"])
     return result
@@ -123,7 +123,7 @@ async def paid_milestone(id: str, freelancer_id: str = Depends(get_current_user_
 @router.post("/check-now")
 async def check_now(freelancer_id: str = Depends(get_current_user_id)):
     db = get_db()
-    from lib.state_machine import run_pending_checks
+    from helpers.state_machine import run_pending_checks
         
     stats = run_pending_checks(db, freelancer_id)
     return stats
@@ -150,7 +150,7 @@ async def create_milestone_invoice(
     if milestone.get("status") != "TRIGGERED":
         raise HTTPException(status_code=409, detail=f"Milestone is currently '{milestone.get('status')}', not TRIGGERED")
         
-    from lib.invoice_gen import create_invoice
+    from helpers.invoice_gen import create_invoice
         
     edited_amount = request.edited_amount if request else None
     invoice = create_invoice(db, id, edited_amount=edited_amount)
@@ -182,7 +182,7 @@ async def create_missed_deadline_invoice(
     if milestone.get("status") != "TRIGGERED":
         raise HTTPException(status_code=409, detail=f"Milestone is currently '{milestone.get('status')}', not TRIGGERED")
         
-    from lib.invoice_gen import create_invoice
+    from helpers.invoice_gen import create_invoice
         
     invoice = create_invoice(db, id, delivery_missed=True, discount_percentage=request.discount_percentage)
     invoice["_id"] = str(invoice["_id"])

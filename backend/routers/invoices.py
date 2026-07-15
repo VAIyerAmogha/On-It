@@ -5,14 +5,14 @@ from pydantic import BaseModel
 from bson import ObjectId
 from db import get_db
 
-from lib.auth_dep import get_current_user_id
-from lib.storage import retrieve_pdf, StorageError
+from helpers.auth_dep import get_current_user_id
+from helpers.storage import retrieve_pdf, StorageError
 
 import datetime
 from datetime import timezone
 
-from lib import email_utils
-from lib.invoice_gen import build_cover_note
+from helpers import email_utils
+from helpers.invoice_gen import build_cover_note
 import config
 
 router = APIRouter()

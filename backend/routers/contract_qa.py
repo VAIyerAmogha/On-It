@@ -3,8 +3,8 @@ from pydantic import BaseModel
 from bson import ObjectId
 from db import get_db
 
-from lib.auth_dep import get_current_user_id
-from lib.rag import ask_contract
+from helpers.auth_dep import get_current_user_id
+from helpers.rag import ask_contract
 
 router = APIRouter()
 

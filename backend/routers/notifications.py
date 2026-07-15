@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends
 from db import get_db
 
-from lib.auth_dep import get_current_user_id
-from lib.notifications import get_notifications
-from lib.state_machine import run_pending_checks
+from helpers.auth_dep import get_current_user_id
+from helpers.notifications import get_notifications
+from helpers.state_machine import run_pending_checks
 
 router = APIRouter()
 

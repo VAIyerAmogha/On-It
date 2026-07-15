@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import Optional
 from bson import ObjectId
 from db import get_db
-from lib.auth_dep import get_current_user_id
+from helpers.auth_dep import get_current_user_id
 
 router = APIRouter()
 
