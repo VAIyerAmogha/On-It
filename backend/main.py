@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 import os
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -29,18 +30,27 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-app.add_middleware(COOPMiddleware)
+# --- Build the allowed origins list ---
+_allowed_origins = [
+    "http://localhost:3000",
+]
+_frontend_url = os.environ.get("FRONTEND_URL", "").strip()
+if _frontend_url and _frontend_url not in _allowed_origins:
+    _allowed_origins.append(_frontend_url)
 
+# CORS middleware must be added FIRST (runs outermost) so it handles
+# preflight OPTIONS requests before anything else.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        os.environ.get("FRONTEND_URL", "http://localhost:3000"),
-    ],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+# COOP middleware runs after CORS.
+app.add_middleware(COOPMiddleware)
 
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 app.include_router(settings_router, prefix="/api/settings", tags=["settings"])
@@ -53,5 +63,3 @@ app.include_router(notifications_router, prefix="/api/notifications", tags=["not
 @app.get("/health")
 async def health():
     return {"status": "ok"}
-
-
