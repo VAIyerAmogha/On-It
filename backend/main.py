@@ -33,6 +33,7 @@ app = FastAPI(lifespan=lifespan)
 # --- Build the allowed origins list ---
 _allowed_origins = [
     "http://localhost:3000",
+    "https://on-it-k97g.vercel.app",
 ]
 _frontend_url = os.environ.get("FRONTEND_URL", "").strip()
 if _frontend_url and _frontend_url not in _allowed_origins:
