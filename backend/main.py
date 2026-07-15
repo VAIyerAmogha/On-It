@@ -2,6 +2,17 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 import os
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+
+
+class COOPMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["Cross-Origin-Opener-Policy"] = "unsafe-none"
+        response.headers["Cross-Origin-Embedder-Policy"] = "unsafe-none"
+        return response
+
 from routers.auth import router as auth_router
 from routers.settings import router as settings_router
 from routers.contracts import router as contracts_router
@@ -9,6 +20,7 @@ from routers.milestones import router as milestones_router
 from routers.invoices import router as invoices_router
 from routers.contract_qa import router as contract_qa_router
 from routers.notifications import router as notifications_router
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("startup")
@@ -16,6 +28,8 @@ async def lifespan(app: FastAPI):
     print("shutdown")
 
 app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(COOPMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
